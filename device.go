@@ -9,6 +9,7 @@ import (
 	"os"
 	"unsafe"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/dcrd/blockchain"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 
@@ -323,6 +324,7 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	var state [8]uint32
 	copy(state[:], d.midstate[:])
 	blake256.Block(state[:], data[128:192], 1440)
+	minrLog.Tracef("midstate %v state %v data %v", d.midstate[:], spew.Sdump(state[:]), data[128:192])
 
 	var hash [32]byte
 	for i := 0; i < 8; i++ {
