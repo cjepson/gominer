@@ -219,6 +219,7 @@ func (d *Device) updateCurrentWork() {
 	// Hash the two first blocks
 	blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
 	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
+	minrLog.Tracef("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
 
 	// Convert the next block to uint32 array.
 	for i := 0; i < 16; i++ {
