@@ -260,6 +260,7 @@ func (d *Device) runDevice() error {
 
 		// args 1..8: midstate
 		for i := 0; i < 8; i++ {
+			minrLog.Infof("mid: %v: %v", i+1, d.midstate[i])
 			ms := d.midstate[i]
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1), uint32Size, unsafe.Pointer(&ms))
 			if status != cl.CL_SUCCESS {
@@ -274,6 +275,7 @@ func (d *Device) runDevice() error {
 				i2++
 			}
 			lb := d.lastBlock[i2]
+			minrLog.Infof("lastblock: %v: %v", i+9, lb)
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9), uint32Size, unsafe.Pointer(&lb))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
