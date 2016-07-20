@@ -725,9 +725,9 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		return err
 	}
-	poolLog.Errorf("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
+	poolLog.Tracef("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Errorf("extraNonce %v", extraNonce)
+	poolLog.Tracef("extraNonce %v", extraNonce)
 
 	// Increase extranonce2
 	s.PoolWork.ExtraNonce2++
@@ -844,7 +844,7 @@ func (s *Stratum) PrepWork() error {
 	}
 	workPosition += 4
 	binary.LittleEndian.PutUint32(randomBytes, 4066485248)
-	poolLog.Errorf("Random data: %v at: %v", randomBytes, workPosition)
+	poolLog.Tracef("Random data: %v at: %v", randomBytes, workPosition)
 	copy(workdata[workPosition:], randomBytes)
 
 	poolLog.Debugf("workdata len %v", len(workdata))

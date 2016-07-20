@@ -210,7 +210,7 @@ func (d *Device) updateCurrentWork() {
 	d.hasWork = true
 
 	d.work = *w
-	minrLog.Errorf("pre-nonce: %v", hex.EncodeToString(d.work.Data[:]))
+	minrLog.Tracef("pre-nonce: %v", hex.EncodeToString(d.work.Data[:]))
 	// Set nonce2
 	//binary.BigEndian.PutUint32(d.work.Data[124+4*nonce2Word:], uint32(d.index+1))
 	binary.LittleEndian.PutUint32(d.work.Data[124+4*nonce2Word:], d.work.Nonce2)
@@ -222,7 +222,7 @@ func (d *Device) updateCurrentWork() {
 	// Hash the two first blocks
 	blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
 	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
-	minrLog.Errorf("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
+	minrLog.Tracef("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
 
 	/* sgminer
 	   debugcty 32 2880307200
@@ -243,7 +243,7 @@ func (d *Device) updateCurrentWork() {
 	for i := 0; i < 16; i++ {
 		d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
 		//minrLog.Errorf("start/stopn %v: %v", 128+i*4, 132+i*4)
-		minrLog.Errorf("lastblockin %v: %v", i, d.lastBlock[i])
+		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 		//minrLog.Errorf("hex: %v", hex.EncodeToString(d.work.Data[128+i*4:132+i*4]))
 	}
 }
@@ -286,7 +286,7 @@ func (d *Device) runDevice() error {
 
 		// args 1..8: midstate
 		for i := 0; i < 8; i++ {
-			minrLog.Infof("mid: %v: %v", i+1, d.midstate[i])
+			minrLog.Tracef("mid: %v: %v", i+1, d.midstate[i])
 			ms := d.midstate[i]
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1), uint32Size, unsafe.Pointer(&ms))
 			if status != cl.CL_SUCCESS {
@@ -301,7 +301,7 @@ func (d *Device) runDevice() error {
 				i2++
 			}
 			lb := d.lastBlock[i2]
-			minrLog.Infof("lastblockused: %v: %v", i+9, lb)
+			minrLog.Tracef("lastblockused: %v: %v", i+9, lb)
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9), uint32Size, unsafe.Pointer(&lb))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
