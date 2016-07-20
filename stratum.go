@@ -710,9 +710,6 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 // PrepWork converts the stratum notify to getwork style data for mining.
 func (s *Stratum) PrepWork() error {
 
-	// Bump nonce2
-	s.PoolWork.Nonce2++
-
 	// Build final extranonce
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
 	if err != nil {
