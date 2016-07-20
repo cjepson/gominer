@@ -271,7 +271,11 @@ func (d *Device) runDevice() error {
 		}
 
 		// Increment nonce1
-		d.lastBlock[nonce1Word]++
+		//d.lastBlock[nonce1Word]++
+		d.work.Nonce2++
+		var tmpBytes = make([]byte, 4)
+		binary.LittleEndian.PutUint32(tmpBytes, d.work.Nonce2)
+		d.lastBlock[nonce1Word] = binary.BigEndian.Uint32(tmpBytes)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
