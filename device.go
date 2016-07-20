@@ -57,6 +57,7 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 type Work struct {
 	Data   [192]byte
 	Target [32]byte
+	Nonce2 uint32
 }
 
 type Device struct {
@@ -209,17 +210,19 @@ func (d *Device) updateCurrentWork() {
 	d.hasWork = true
 
 	d.work = *w
-
+	minrLog.Errorf("pre-nonce: %v", hex.EncodeToString(d.work.Data[:]))
 	// Set nonce2
-	binary.BigEndian.PutUint32(d.work.Data[128+4*nonce2Word:], uint32(d.index))
-
+	//binary.BigEndian.PutUint32(d.work.Data[124+4*nonce2Word:], uint32(d.index+1))
+	binary.LittleEndian.PutUint32(d.work.Data[124+4*nonce2Word:], d.work.Nonce2)
+	//minrLog.Errorf("nonce crap: %v %v", d.index, uint32(d.index))
+	//minrLog.Errorf("post-nonce: %v", hex.EncodeToString(d.work.Data[:]))
 	// Reset the hash state
 	copy(d.midstate[:], blake256.IV256[:])
 
 	// Hash the two first blocks
 	blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
 	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
-	minrLog.Tracef("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
+	minrLog.Errorf("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
 
 	/* sgminer
 	   debugcty 32 2880307200
@@ -239,7 +242,9 @@ func (d *Device) updateCurrentWork() {
 	// Convert the next block to uint32 array.
 	for i := 0; i < 16; i++ {
 		d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
-		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
+		//minrLog.Errorf("start/stopn %v: %v", 128+i*4, 132+i*4)
+		minrLog.Errorf("lastblockin %v: %v", i, d.lastBlock[i])
+		//minrLog.Errorf("hex: %v", hex.EncodeToString(d.work.Data[128+i*4:132+i*4]))
 	}
 }
 

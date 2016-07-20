@@ -49,6 +49,7 @@ type NotifyWork struct {
 	ExtraNonce1       string
 	ExtraNonce2       uint64
 	ExtraNonce2Length float64
+	Nonce2            uint32
 	CB1               string
 	CB2               string
 	Height            int64
@@ -709,6 +710,9 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 // PrepWork converts the stratum notify to getwork style data for mining.
 func (s *Stratum) PrepWork() error {
 
+	// Bump nonce2
+	s.PoolWork.Nonce2++
+
 	// Build final extranonce
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
 	if err != nil {
@@ -724,9 +728,9 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		return err
 	}
-	poolLog.Debugf("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
+	poolLog.Errorf("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Debugf("extraNonce %v", extraNonce)
+	poolLog.Errorf("extraNonce %v", extraNonce)
 
 	// Increase extranonce2
 	s.PoolWork.ExtraNonce2++
@@ -842,6 +846,8 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Errorf("Unable to generate random bytes")
 	}
 	workPosition += 4
+	binary.LittleEndian.PutUint32(randomBytes, 4066485248)
+	poolLog.Errorf("Random data: %v at: %v", randomBytes, workPosition)
 	copy(workdata[workPosition:], randomBytes)
 
 	poolLog.Debugf("workdata len %v", len(workdata))
@@ -865,6 +871,7 @@ func (s *Stratum) PrepWork() error {
 	copy(w.Data[:], empty[:])*/
 	copy(w.Data[:], workdata[:])
 	copy(w.Target[:], target)
+	w.Nonce2 = s.PoolWork.Nonce2
 	poolLog.Tracef("final data %v, target %v", hex.EncodeToString(w.Data[:]), hex.EncodeToString(w.Target[:]))
 	s.PoolWork.Work = &w
 	return nil
@@ -911,9 +918,9 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		//return err
 	}
-	poolLog.Tracef("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
+	poolLog.Errorf("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Tracef("extraNonce %v", extraNonce)
+	poolLog.Errorf("extraNonce %v", extraNonce)
 
 	s.ID++
 	sub.ID = s.ID
