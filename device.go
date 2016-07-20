@@ -221,9 +221,25 @@ func (d *Device) updateCurrentWork() {
 	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
 	minrLog.Tracef("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
 
+	/* sgminer
+	   debugcty 32 2880307200
+	   debugcty 33 638058496
+	   debugcty 34 2395439959
+	   debugcty 36 100663296
+	   debugcty 37 10779704
+	   debugcty 38 3808510773
+	   debugcty 39 0
+	   debugcty 40 0
+	   debugcty 41 0
+	   debugcty 42 0
+	   debugcty 43 0
+	   debugcty 44 0
+	*/
+
 	// Convert the next block to uint32 array.
 	for i := 0; i < 16; i++ {
 		d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
+		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 	}
 }
 
@@ -276,7 +292,7 @@ func (d *Device) runDevice() error {
 				i2++
 			}
 			lb := d.lastBlock[i2]
-			minrLog.Infof("lastblock: %v: %v", i+9, lb)
+			minrLog.Infof("lastblockused: %v: %v", i+9, lb)
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9), uint32Size, unsafe.Pointer(&lb))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
