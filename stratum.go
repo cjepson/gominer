@@ -843,7 +843,8 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Errorf("Unable to generate random bytes")
 	}
 	workPosition += 4
-	binary.LittleEndian.PutUint32(randomBytes, 4066485248)
+	// XXX would be nice to enable a static 'random' number here for tests
+	//binary.LittleEndian.PutUint32(randomBytes, 4066485248)
 	poolLog.Tracef("Random data: %v at: %v", randomBytes, workPosition)
 	copy(workdata[workPosition:], randomBytes)
 

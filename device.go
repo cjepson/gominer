@@ -249,8 +249,8 @@ func (d *Device) updateCurrentWork() {
 }
 
 func (d *Device) Run() {
-	d.testFoundCandidate()
-	return
+	//d.testFoundCandidate()
+	//return
 	err := d.runDevice()
 	if err != nil {
 		minrLog.Errorf("Error on device: %v", err)
