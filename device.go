@@ -380,12 +380,6 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
 	hash := chainhash.HashFuncB(data[0:180])
 
-	//var hash [32]byte
-
-	//for i := 0; i < 32; i++ {
-	//	hash[i] = hash[i]
-	//}
-
 	newHash, err := chainhash.NewHashFromStr(hex.EncodeToString(reverse(hash[:])))
 	if err != nil {
 		minrLog.Error(err)
@@ -394,7 +388,7 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	minrLog.Errorf("newHash: %v", newHash)
 	hashNum := blockchain.ShaHashToBig(newHash)
 	target := new(big.Int)
-	target.SetString(hex.EncodeToString(reverse(d.work.Target[:])), 16)
+	target.SetString(hex.EncodeToString(d.work.Target[:]), 16)
 	if hashNum.Cmp(target) > 0 {
 		minrLog.Infof("Hash %s below target %s", hex.EncodeToString(reverse(hash[:])), hex.EncodeToString(reverse(d.work.Target[:])))
 
