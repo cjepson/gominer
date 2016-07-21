@@ -930,7 +930,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 
 	poolLog.Tracef("encoded User %v JobId %v xnonce2 %v time %v nonce %v", s.User, s.PoolWork.JobID, en2, string(time), nonce)
 
-	sub.Params = []string{s.User, s.PoolWork.JobID, hex.EncodeToString(en2), s.PoolWork.Ntime, nonce}
+	sub.Params = []string{s.User, s.PoolWork.JobID, hex.EncodeToString(data[144:155]), s.PoolWork.Ntime, nonce}
 	// pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr
 
 	return sub, nil
