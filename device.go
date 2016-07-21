@@ -271,10 +271,13 @@ func (d *Device) Run() {
 	d.midstate[7] = m7
 
 	//d.Work.Data
-	//d.Work.Target
+	//d.Work.Target 00000000ffff0000000000000000000000000000000000000000000000000000
 
 	//d.foundCandidate(n1, n0)
 	//os.Exit(0)
+	//need to match
+	//00000000df6ffb6059643a9215f95751baa7b1ed8aa93edfeb9a560ecb1d5884
+	//stratum submit {"params": ["test", "76df", "0200000000a461f2e3014335", "5783c78e", "e38c6e00"], "id": 4, "method": "mining.submit"}
 	err := d.runDevice()
 	if err != nil {
 		minrLog.Errorf("Error on device: %v", err)
