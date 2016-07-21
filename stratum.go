@@ -116,9 +116,9 @@ type NotifyRes struct {
 
 // Submit models a submission message.
 type Submit struct {
-	Method string      `json:"method"`
 	Params []string    `json:"params"`
 	ID     interface{} `json:"id"`
+	Method string      `json:"method"`
 }
 
 // errJsonType is an error for json that we do not expect.
