@@ -246,32 +246,30 @@ func (d *Device) updateCurrentWork() {
 		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 		//minrLog.Errorf("hex: %v", hex.EncodeToString(d.work.Data[128+i*4:132+i*4]))
 	}
+	minrLog.Errorf("data: %v", d.work.Data)
+	minrLog.Errorf("target: %v", d.work.Target)
 }
 
 func (d *Device) Run() {
 	n1 := uint32(33554432)
 	n0 := uint32(7245027)
 
-	m0 := uint32(2421507776)
-	m1 := uint32(2099684366)
-	m2 := uint32(8033620)
-	m3 := uint32(950943511)
-	m4 := uint32(2489053653)
-	m5 := uint32(3357747798)
-	m6 := uint32(2534384973)
-	m7 := uint32(2947973092)
+	d.midstate[0] = uint32(2421507776)
+	d.midstate[1] = uint32(2099684366)
+	d.midstate[2] = uint32(8033620)
+	d.midstate[3] = uint32(950943511)
+	d.midstate[4] = uint32(2489053653)
+	d.midstate[5] = uint32(3357747798)
+	d.midstate[6] = uint32(2534384973)
+	d.midstate[7] = uint32(2947973092)
 
-	d.midstate[0] = m0
-	d.midstate[1] = m1
-	d.midstate[2] = m2
-	d.midstate[3] = m3
-	d.midstate[4] = m4
-	d.midstate[5] = m5
-	d.midstate[6] = m6
-	d.midstate[7] = m7
+	target, _ := hex.DecodeString("00000000ffff0000000000000000000000000000000000000000000000000000")
+	copy(d.work.Target[:], target)
+
+	minrLog.Errorf("target: %v", d.work.Target)
+	minrLog.Errorf("nonce1 %v, nonce0: %v", n1, n0)
 
 	//d.Work.Data
-	//d.Work.Target 00000000ffff0000000000000000000000000000000000000000000000000000
 
 	//d.foundCandidate(n1, n0)
 	//os.Exit(0)
