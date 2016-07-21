@@ -249,6 +249,32 @@ func (d *Device) updateCurrentWork() {
 }
 
 func (d *Device) Run() {
+	n1 := uint32(33554432)
+	n0 := uint32(7245027)
+
+	m0 := uint32(2421507776)
+	m1 := uint32(2099684366)
+	m2 := uint32(8033620)
+	m3 := uint32(950943511)
+	m4 := uint32(2489053653)
+	m5 := uint32(3357747798)
+	m6 := uint32(2534384973)
+	m7 := uint32(2947973092)
+
+	d.midstate[0] = m0
+	d.midstate[1] = m1
+	d.midstate[2] = m2
+	d.midstate[3] = m3
+	d.midstate[4] = m4
+	d.midstate[5] = m5
+	d.midstate[6] = m6
+	d.midstate[7] = m7
+
+	//d.Work.Data
+	//d.Work.Target
+
+	//d.foundCandidate(n1, n0)
+	//os.Exit(0)
 	err := d.runDevice()
 	if err != nil {
 		minrLog.Errorf("Error on device: %v", err)
@@ -351,7 +377,7 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	// Perform the final hash block to get the hash
 	var state [8]uint32
 	copy(state[:], d.midstate[:])
-	blake256.Block(state[:], data[128:192], 1440)
+	blake256.Block(state[:], data[128:180], 1440)
 	minrLog.Tracef("midstate %v state %v data %v", d.midstate[:], spew.Sdump(state[:]), data[128:192])
 
 	var hash [32]byte
