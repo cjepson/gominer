@@ -22,6 +22,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/decred/dcrd/chaincfg"
+	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/wire"
 )
 
@@ -793,10 +794,10 @@ func (s *Stratum) PrepWork() error {
 	}
 
 	data := blockHeader
-	poolLog.Debugf("data0 %v", data)
+	poolLog.Debugf("data0 to prep %x", data)
 	poolLog.Tracef("data len %v", len(data))
 	copy(data[31:139], cb1[0:108])
-	poolLog.Debugf("data1 %v", data)
+	poolLog.Debugf("data1 to prep %v", data)
 
 	var workdata [180]byte
 	workPosition := 0
@@ -870,8 +871,27 @@ func (s *Stratum) PrepWork() error {
 
 }
 
+func swapHeaderCrazyEndian(aPtr *[]byte) {
+	a := *aPtr
+	sz := len(a)
+	itrs := sz / 4
+	fmt.Printf("a %x\n", a)
+	for i := 0; i < itrs; i++ {
+		a[(i*4)], a[(i*4)+3] = a[(i*4)+3], a[i*4]
+		a[(i*4)+1], a[(i*4)+2] = a[(i*4)+2], a[(i*4)+1]
+	}
+	fmt.Printf("a2 %x\n", a)
+}
+
 // PrepSubmit formats a mining.sumbit message from the solved work.
 func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
+	poolLog.Debugf("got valid work to submit %x", data)
+	poolLog.Debugf("valid work hash %x", chainhash.HashFuncB(data[0:180]))
+	data2 := make([]byte, 180)
+	copy(data2, data[0:180])
+	swapHeaderCrazyEndian(data2)
+	poolLog.Debugf("valid work hash %x (crazy endian)", chainhash.HashFuncB(data2[0:180]))
+
 	sub := Submit{}
 	sub.Method = "mining.submit"
 
