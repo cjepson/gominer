@@ -176,7 +176,7 @@ func GetWork() (*Work, error) {
 		return nil, fmt.Errorf("Wrong target length: got %d, expected 32", len(target))
 	}
 	bigTarget := new(big.Int)
-	bigTarget.SetString(hex.EncodeToString(target))
+	bigTarget.SetString(hex.EncodeToString(target), 16)
 
 	var w Work
 	copy(w.Data[:], data)
