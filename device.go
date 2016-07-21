@@ -250,6 +250,15 @@ func (d *Device) updateCurrentWork() {
 }
 
 func (d *Device) Run() {
+	d.testFoundCandidate()
+	return
+	err := d.runDevice()
+	if err != nil {
+		minrLog.Errorf("Error on device: %v", err)
+	}
+}
+
+func (d *Device) testFoundCandidate() {
 	n1 := uint32(33554432)
 	n0 := uint32(7245027)
 
@@ -273,14 +282,9 @@ func (d *Device) Run() {
 	minrLog.Errorf("nonce1 %v, nonce0: %v", n1, n0)
 
 	d.foundCandidate(n1, n0)
-	return
 	//need to match
 	//00000000df6ffb6059643a9215f95751baa7b1ed8aa93edfeb9a560ecb1d5884
 	//stratum submit {"params": ["test", "76df", "0200000000a461f2e3014335", "5783c78e", "e38c6e00"], "id": 4, "method": "mining.submit"}
-	err := d.runDevice()
-	if err != nil {
-		minrLog.Errorf("Error on device: %v", err)
-	}
 }
 
 func (d *Device) runDevice() error {
@@ -380,7 +384,7 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	var state [8]uint32
 	copy(state[:], d.midstate[:])
 	blake256.Block(state[:], data[128:192], 1440)
-	minrLog.Tracef("midstate %v state %v data %v", d.midstate[:], spew.Sdump(state[:]), data[128:192])
+	minrLog.Infof("midstate %v state %v data %v", d.midstate[:], spew.Sdump(state[:]), data[128:192])
 
 	var hash [32]byte
 	for i := 0; i < 8; i++ {
