@@ -246,8 +246,7 @@ func (d *Device) updateCurrentWork() {
 		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 		//minrLog.Errorf("hex: %v", hex.EncodeToString(d.work.Data[128+i*4:132+i*4]))
 	}
-	minrLog.Errorf("data: %v", d.work.Data)
-	minrLog.Errorf("target: %v", d.work.Target)
+	minrLog.Errorf("data: %v", hex.EncodeToString(d.work.Data[:]))
 }
 
 func (d *Device) Run() {
@@ -266,6 +265,10 @@ func (d *Device) Run() {
 	target, _ := hex.DecodeString("00000000ffff0000000000000000000000000000000000000000000000000000")
 	copy(d.work.Target[:], target)
 
+	data, _ := hex.DecodeString("01000000509a3b7c65f8986a464c0e82ec5ca6aaf18cf13787507cbfc20a000000000000a455f69725e9c8623baa3c9c5a708aefb947702dc2b620b4c10129977e104c0275571a5ca5b1308b075fe74224504c9e6b1153f3de97235e7a8c7e58ea8f1c55010086a1d41fb3ee05000000fda400004a33121a2db33e1101000000abae0000260800008ec78357000000000000000000a461f2e3014335000000000000000000000000000000000000000000000000000000000000000000000000")
+	copy(d.work.Data[:], data)
+
+	minrLog.Errorf("data: %v", d.work.Data)
 	minrLog.Errorf("target: %v", d.work.Target)
 	minrLog.Errorf("nonce1 %v, nonce0: %v", n1, n0)
 
