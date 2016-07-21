@@ -387,10 +387,8 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	minrLog.Errorf("hash: %x", hash)
 	minrLog.Errorf("newHash: %v", newHash)
 	hashNum := blockchain.ShaHashToBig(newHash)
-	target := new(big.Int)
-	target.SetString(hex.EncodeToString(d.work.Target[:]), 16)
-	if hashNum.Cmp(target) > 0 {
-		minrLog.Infof("Hash %s below target %s", hex.EncodeToString(reverse(hash[:])), hex.EncodeToString(reverse(d.work.Target[:])))
+	if hashNum.Cmp(d.work.Target) > 0 {
+		minrLog.Infof("Hash %s below target %s", hex.EncodeToString(reverse(hash[:])), d.work.Target)
 
 	} else {
 		minrLog.Infof("Found hash!!  %s", hex.EncodeToString(hash[:]))

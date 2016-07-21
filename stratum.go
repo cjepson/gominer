@@ -21,8 +21,11 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/wire"
 )
+
+var chainParams = &chaincfg.MainNetParams
 
 // Stratum holds all the shared information for a stratum connection.
 // XXX most of these should be unexported and use getters/setters.
@@ -37,7 +40,7 @@ type Stratum struct {
 	subID     uint64
 	submitID  uint64
 	Diff      float64
-	Target    string
+	Target    *big.Int
 	submitted bool
 	PoolWork  NotifyWork
 }
@@ -151,7 +154,7 @@ func StratumConn(pool, user, pass string) (*Stratum, error) {
 	stratum.authID = 2
 	// Target for share is 1 unless we hear otherwise.
 	stratum.Diff = 1
-	stratum.Target = stratum.diffToTarget(stratum.Diff)
+	stratum.Target = diffToTarget(stratum.Diff)
 	stratum.PoolWork.NewWork = false
 	stratum.Reader = bufio.NewReader(stratum.Conn)
 	go stratum.Listen()
@@ -623,7 +626,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		if !ok {
 			return nil, errJsonType
 		}
-		s.Target = s.diffToTarget(difficulty)
+		s.Target = diffToTarget(difficulty)
 		s.Diff = difficulty
 		var nres = StratumMsg{}
 		nres.Method = method
@@ -789,15 +792,6 @@ func (s *Stratum) PrepWork() error {
 		return err
 	}
 
-	target, err := hex.DecodeString(s.Target)
-	if err != nil {
-		poolLog.Error("Error decoding Target")
-		return err
-	}
-	if len(target) != 32 {
-		return fmt.Errorf("Wrong target length: got %d, expected 32", len(target))
-	}
-
 	data := blockHeader
 	poolLog.Debugf("data0 %v", data)
 	poolLog.Tracef("data len %v", len(data))
@@ -868,9 +862,9 @@ func (s *Stratum) PrepWork() error {
 	}
 	copy(w.Data[:], empty[:])*/
 	copy(w.Data[:], workdata[:])
-	copy(w.Target[:], target)
+	w.Target = s.Target
 	w.Nonce2 = s.PoolWork.Nonce2
-	poolLog.Tracef("final data %v, target %v", hex.EncodeToString(w.Data[:]), hex.EncodeToString(w.Target[:]))
+	poolLog.Tracef("final data %v, target %v", hex.EncodeToString(w.Data[:]), w.Target)
 	s.PoolWork.Work = &w
 	return nil
 
@@ -961,53 +955,14 @@ func reverseS(s string) (string, error) {
 	return sRev, nil
 }
 
-func reverseToInt(s string) (int32, error) {
-	sRev, err := reverseS(s)
-	if err != nil {
-		return 0, err
-	}
-	i, err := strconv.ParseInt(sRev, 10, 32)
-	return int32(i), err
-}
+// diffToTarget converts a whole number difficulty into a target.
+func diffToTarget(diff float64) *big.Int {
+	divisor := new(big.Int).SetInt64(int64(diff))
+	max := chainParams.PowLimit
+	target := new(big.Int)
+	target.Div(max, divisor)
 
-func (s *Stratum) diffToTarget(diff float64) string {
-	// diff/0 would be bad.
-	if s.Diff == 0 {
-		s.Diff = 1
-	}
-	// Also if diff wasn't set properly go with default
-	// rather then end if div by 0.
-	if diff == 0 {
-		diff = 1
-	}
-	diffNew := int64(diff / s.Diff)
-	_, targetHex := s.getTargetHex(diffNew)
-	return targetHex
-}
-
-// Adapted from https://github.com/sammy007/go-cryptonote-pool.git
-func (s *Stratum) getTargetHex(diff int64) (uint32, string) {
-	var Diff1 *big.Int
-	Diff1 = new(big.Int)
-	Diff1.SetString("00000000FFFF0000000000000000000000000000000000000000000000000000", 16)
-
-	padded := make([]byte, 32)
-
-	diff2 := new(big.Int)
-	diff2.SetInt64(int64(diff))
-
-	diff3 := new(big.Int)
-	diff3 = diff3.Div(Diff1, diff2)
-
-	diffBuff := diff3.Bytes()
-	copy(padded[32-len(diffBuff):], diffBuff)
-	buff := padded[0:32]
-	var target uint32
-	targetBuff := bytes.NewReader(buff)
-	binary.Read(targetBuff, binary.LittleEndian, &target)
-	targetHex := hex.EncodeToString(buff)
-
-	return target, targetHex
+	return target
 }
 
 func reverse(src []byte) []byte {
