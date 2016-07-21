@@ -9,7 +9,6 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/dcrd/blockchain"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 
@@ -279,7 +278,7 @@ func (d *Device) testFoundCandidate() {
 
 	minrLog.Errorf("data: %v", d.work.Data)
 	minrLog.Errorf("target: %v", d.work.Target)
-	minrLog.Errorf("nonce1 %v, nonce0: %v", n1, n0)
+	minrLog.Errorf("nonce1 %x, nonce0: %x", n1, n0)
 
 	d.foundCandidate(n1, n0)
 	//need to match
@@ -379,22 +378,20 @@ func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
 	copy(data, d.work.Data[:])
 	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
+	hash := chainhash.HashFuncB(data[0:180])
 
-	// Perform the final hash block to get the hash
-	var state [8]uint32
-	copy(state[:], d.midstate[:])
-	blake256.Block(state[:], data[128:192], 1440)
-	minrLog.Infof("midstate %v state %v data %v", d.midstate[:], spew.Sdump(state[:]), data[128:192])
+	//var hash [32]byte
 
-	var hash [32]byte
-	for i := 0; i < 8; i++ {
-		binary.BigEndian.PutUint32(hash[i*4:], state[i])
-	}
+	//for i := 0; i < 32; i++ {
+	//	hash[i] = hash[i]
+	//}
 
 	newHash, err := chainhash.NewHashFromStr(hex.EncodeToString(reverse(hash[:])))
 	if err != nil {
 		minrLog.Error(err)
 	}
+	minrLog.Errorf("hash: %x", hash)
+	minrLog.Errorf("newHash: %v", newHash)
 	hashNum := blockchain.ShaHashToBig(newHash)
 	target := new(big.Int)
 	target.SetString(hex.EncodeToString(reverse(d.work.Target[:])), 16)
