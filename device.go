@@ -245,7 +245,7 @@ func (d *Device) updateCurrentWork() {
 		minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 		//minrLog.Errorf("hex: %v", hex.EncodeToString(d.work.Data[128+i*4:132+i*4]))
 	}
-	minrLog.Errorf("data: %v", hex.EncodeToString(d.work.Data[:]))
+	minrLog.Tracef("data: %v", hex.EncodeToString(d.work.Data[:]))
 }
 
 func (d *Device) Run() {
