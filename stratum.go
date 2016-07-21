@@ -955,6 +955,15 @@ func reverseS(s string) (string, error) {
 	return sRev, nil
 }
 
+func reverseToInt(s string) (int32, error) {
+	sRev, err := reverseS(s)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(sRev, 10, 32)
+	return int32(i), err
+}
+
 // diffToTarget converts a whole number difficulty into a target.
 func diffToTarget(diff float64) *big.Int {
 	divisor := new(big.Int).SetInt64(int64(diff))

@@ -55,7 +55,7 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 
 type Work struct {
 	Data   [192]byte
-	Target [32]byte
+	Target *big.Int
 	Nonce2 uint32
 }
 
