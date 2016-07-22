@@ -73,11 +73,9 @@ type Device struct {
 	// byte is the device ID (supporting up to 255 devices)
 	// while the last 3 bytes is the extraNonce value. If
 	// the extraNonce goes through all 0x??FFFFFF values,
-	// it will reset to 0x??000000 automatically. As long
-	// as the miner can't go through this many extra nonce
-	// values rapidly (GPUs currently can not), this should
-	// prevent the device from doing extra work.
-	extraNonce uint32
+	// it will reset to 0x??000000.
+	extraNonce    uint32
+	currentWorkID uint32
 
 	midstate  [8]uint32
 	lastBlock [16]uint32
@@ -95,24 +93,29 @@ type Device struct {
 	quit chan struct{}
 }
 
-// Compares a and b as big endian
-func hashSmaller(a, b []byte) bool {
-	for i := len(a) - 1; i >= 0; i-- {
-		if a[i] < b[i] {
-			return true
-		}
-		if a[i] > b[i] {
-			return false
-		}
+// Swap the endianness of a uint32 from big endian to little endian.
+func BEUint32LE(v uint32) uint32 {
+	return (v&0x000000FF)<<24 | (v&0x0000FF00)<<8 |
+		(v&0x00FF0000)>>8 | (v&0xFF000000)>>24
+}
+
+// rolloverExtraNonce rolls over the extraNonce if it goes over 0x00FFFFFF many
+// hashes, since the first byte is reserved for the ID.
+func rolloverExtraNonce(v *uint32) {
+	if *v&0x00FFFFFF == 0x00FFFFFF {
+		*v = *v & 0xFF000000
+	} else {
+		*v++
 	}
-	return false
 }
 
 func clError(status cl.CL_int, f string) error {
-	return fmt.Errorf("%s returned error %s (%d)", f, cl.ERROR_CODES_STRINGS[-status], status)
+	return fmt.Errorf("%s returned error %s (%d)", f,
+		cl.ERROR_CODES_STRINGS[-status], status)
 }
 
-func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id, workDone chan []byte) (*Device, error) {
+func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id,
+	workDone chan []byte) (*Device, error) {
 	d := &Device{
 		index:      index,
 		platformID: platformID,
@@ -125,60 +128,68 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 
 	var status cl.CL_int
 
-	// Create the CL context
-	d.context = cl.CLCreateContext(nil, 1, []cl.CL_device_id{deviceID}, nil, nil, &status)
+	// Create the CL context.
+	d.context = cl.CLCreateContext(nil, 1, []cl.CL_device_id{deviceID},
+		nil, nil, &status)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateContext")
 	}
 
-	// Create the command queue
+	// Create the command queue.
 	d.queue = cl.CLCreateCommandQueue(d.context, deviceID, 0, &status)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateCommandQueue")
 	}
 
-	// Create the output buffer
-	d.outputBuffer = cl.CLCreateBuffer(d.context, cl.CL_MEM_READ_WRITE, uint32Size*outputBufferSize, nil, &status)
+	// Create the output buffer.
+	d.outputBuffer = cl.CLCreateBuffer(d.context, cl.CL_MEM_READ_WRITE,
+		uint32Size*outputBufferSize, nil, &status)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateBuffer")
 	}
 
-	// Load kernel source
+	// Load kernel source.
 	progSrc, progSize, err := loadProgramSource(cfg.ClKernel)
 	if err != nil {
 		return nil, fmt.Errorf("Could not load kernel source: %v", err)
 	}
 
-	// Create the program
-	d.program = cl.CLCreateProgramWithSource(d.context, 1, progSrc[:], progSize[:], &status)
+	// Create the program.
+	d.program = cl.CLCreateProgramWithSource(d.context, 1, progSrc[:],
+		progSize[:], &status)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateProgramWithSource")
 	}
 
-	// Build the program for the device
+	// Build the program for the device.
 	compilerOptions := ""
 	compilerOptions += fmt.Sprintf(" -D WORKSIZE=%d", localWorksize)
-	status = cl.CLBuildProgram(d.program, 1, []cl.CL_device_id{deviceID}, []byte(compilerOptions), nil, nil)
+	status = cl.CLBuildProgram(d.program, 1, []cl.CL_device_id{deviceID},
+		[]byte(compilerOptions), nil, nil)
 	if status != cl.CL_SUCCESS {
 		err = clError(status, "CLBuildProgram")
 
 		// Something went wrong! Print what it is.
 		var logSize cl.CL_size_t
-		status = cl.CLGetProgramBuildInfo(d.program, deviceID, cl.CL_PROGRAM_BUILD_LOG, 0, nil, &logSize)
+		status = cl.CLGetProgramBuildInfo(d.program, deviceID,
+			cl.CL_PROGRAM_BUILD_LOG, 0, nil, &logSize)
 		if status != cl.CL_SUCCESS {
-			minrLog.Errorf("Could not obtain compilation error log: %v", clError(status, "CLGetProgramBuildInfo"))
+			minrLog.Errorf("Could not obtain compilation error log: %v",
+				clError(status, "CLGetProgramBuildInfo"))
 		}
 		var program_log interface{}
-		status = cl.CLGetProgramBuildInfo(d.program, deviceID, cl.CL_PROGRAM_BUILD_LOG, logSize, &program_log, nil)
+		status = cl.CLGetProgramBuildInfo(d.program, deviceID,
+			cl.CL_PROGRAM_BUILD_LOG, logSize, &program_log, nil)
 		if status != cl.CL_SUCCESS {
-			minrLog.Errorf("Could not obtain compilation error log: %v", clError(status, "CLGetProgramBuildInfo"))
+			minrLog.Errorf("Could not obtain compilation error log: %v",
+				clError(status, "CLGetProgramBuildInfo"))
 		}
 		minrLog.Errorf("%s\n", program_log)
 
 		return nil, err
 	}
 
-	// Create the kernel
+	// Create the kernel.
 	d.kernel = cl.CLCreateKernel(d.program, []byte("search"), &status)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateKernel")
@@ -220,9 +231,10 @@ func (d *Device) updateCurrentWork() {
 	d.work = *w
 	minrLog.Tracef("pre-nonce: %v", hex.EncodeToString(d.work.Data[:]))
 
-	// Set extraNonce.
+	// Bump and set the work ID if the work is new.
+	d.currentWorkID++
 	binary.LittleEndian.PutUint32(d.work.Data[128+4*nonce2Word:],
-		d.extraNonce)
+		d.currentWorkID)
 
 	// Reset the hash state
 	copy(d.midstate[:], blake256.IV256[:])
@@ -230,19 +242,21 @@ func (d *Device) updateCurrentWork() {
 	// Hash the two first blocks
 	blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
 	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
-	minrLog.Tracef("midstate input data %v", hex.EncodeToString(d.work.Data[0:128]))
+	minrLog.Tracef("midstate input data for work update %v",
+		hex.EncodeToString(d.work.Data[0:128]))
 
 	// Convert the next block to uint32 array.
 	for i := 0; i < 16; i++ {
 		d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
-		//minrLog.Tracef("lastblockin %v: %v", i, d.lastBlock[i])
 	}
-	minrLog.Tracef("data: %v", hex.EncodeToString(d.work.Data[:]))
+	minrLog.Tracef("work data for work update: %v",
+		hex.EncodeToString(d.work.Data[:]))
 }
 
 func (d *Device) Run() {
 	//d.testFoundCandidate()
 	//return
+
 	err := d.runDevice()
 	if err != nil {
 		minrLog.Errorf("Error on device: %v", err)
@@ -276,26 +290,12 @@ func (d *Device) testFoundCandidate() {
 	minrLog.Errorf("nonce1 %x, nonce0: %x", n1, n0)
 
 	d.foundCandidate(n1, n0)
+
 	//need to match
 	//00000000df6ffb6059643a9215f95751baa7b1ed8aa93edfeb9a560ecb1d5884
 	//stratum submit {"params": ["test", "76df", "0200000000a461f2e3014335", "5783c78e", "e38c6e00"], "id": 4, "method": "mining.submit"}
 }
 
-// Swap the endianness of a uint32 from big endian to little endian.
-func BEUint32LE(v uint32) uint32 {
-	return (v&0x000000FF)<<24 | (v&0x0000FF00)<<8 |
-		(v&0x00FF0000)>>8 | (v&0xFF000000)>>24
-}
-
-// rolloverExtraNonce rolls over the extraNonce if it goes over 0x00FFFFFF many
-// hashes, since the first byte is reserved for the ID.
-func rolloverExtraNonce(v *uint32) {
-	if *v&0x00FFFFFF == 0x00FFFFFF {
-		*v = *v & 0xFF000000
-	} else {
-		*v++
-	}
-}
 func (d *Device) runDevice() error {
 	minrLog.Infof("Started GPU #%d: %s", d.index, d.deviceName)
 	outputData := make([]uint32, outputBufferSize)
@@ -319,8 +319,7 @@ func (d *Device) runDevice() error {
 		default:
 		}
 
-		// Increment nonce1
-		//d.lastBlock[nonce1Word]++
+		// Increment extraNonce.
 		rolloverExtraNonce(&d.extraNonce)
 		d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
 
@@ -335,7 +334,6 @@ func (d *Device) runDevice() error {
 
 		// args 1..8: midstate
 		for i := 0; i < 8; i++ {
-			//minrLog.Tracef("mid: %v: %v", i+1, d.midstate[i])
 			ms := d.midstate[i]
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1),
 				uint32Size, unsafe.Pointer(&ms))
@@ -471,5 +469,6 @@ func (d *Device) PrintStats() {
 	d.runningTime += 5.0
 
 	minrLog.Infof("GPU #%d: %s, EMA %s avg %s", d.index, d.deviceName,
-		formatHashrate(d.workDoneEMA), formatHashrate(d.workDoneTotal/d.runningTime))
+		formatHashrate(d.workDoneEMA),
+		formatHashrate(d.workDoneTotal/d.runningTime))
 }
