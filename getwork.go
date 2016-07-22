@@ -284,13 +284,13 @@ func GetPoolWorkSubmit(data []byte, pool *Stratum) (bool, error) {
 		return false, err
 	}
 
-	// json encode
+	// JSON encode.
 	m, err := json.Marshal(sub)
 	if err != nil {
 		return false, err
 	}
 
-	// send
+	// Send.
 	poolLog.Tracef("> %s", m)
 	_, err = pool.Conn.Write(m)
 	if err != nil {
@@ -302,7 +302,6 @@ func GetPoolWorkSubmit(data []byte, pool *Stratum) (bool, error) {
 	}
 
 	pool.submitted = true
-	pool.PoolWork.Work = nil
 
 	return true, nil
 }
