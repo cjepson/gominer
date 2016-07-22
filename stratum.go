@@ -728,7 +728,7 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		return err
 	}
-	poolLog.Tracef("en2 %vx s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
+	poolLog.Tracef("en2 %x s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
 	poolLog.Tracef("extra data (uid) %x", extraNonce)
 
@@ -881,7 +881,6 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	sub.Method = "mining.submit"
 
 	// Format data to send off.
-
 	hexData := hex.EncodeToString(data)
 	decodedData, err := hex.DecodeString(hexData)
 	if err != nil {
@@ -898,7 +897,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	}
 
 	//en2 := strconv.FormatUint(s.PoolWork.ExtraNonce2, 16)
-	nonce := strconv.FormatUint(uint64(submittedHeader.Nonce), 16)
+	nonce := fmt.Sprintf("%08x", submittedHeader.Nonce) // strconv.FormatUint(uint64(submittedHeader.Nonce), 16)
 	time := encodeTime(submittedHeader.Timestamp)
 
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
