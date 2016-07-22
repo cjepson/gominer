@@ -713,7 +713,6 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 
 // PrepWork converts the stratum notify to getwork style data for mining.
 func (s *Stratum) PrepWork() error {
-
 	// Build final extranonce
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
 	if err != nil {
@@ -734,7 +733,7 @@ func (s *Stratum) PrepWork() error {
 	poolLog.Tracef("extraNonce %v", extraNonce)
 
 	// Increase extranonce2
-	s.PoolWork.ExtraNonce2++
+	// s.PoolWork.ExtraNonce2++
 
 	// Put coinbase transaction together
 
@@ -845,8 +844,8 @@ func (s *Stratum) PrepWork() error {
 
 	poolLog.Debugf("workdata len %v", len(workdata))
 	poolLog.Tracef("workdata %v", hex.EncodeToString(workdata[:]))
+	*/
 
-	var w Work
 	/*var empty = []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -862,9 +861,10 @@ func (s *Stratum) PrepWork() error {
 		0x00, 0x00, 0x00, 0x00,
 	}
 	copy(w.Data[:], empty[:])*/
+	var w Work
 	copy(w.Data[:], workdata[:])
 	w.Target = s.Target
-	w.Nonce2 = s.PoolWork.Nonce2
+
 	poolLog.Tracef("final data %v, target %v", hex.EncodeToString(w.Data[:]), w.Target)
 	s.PoolWork.Work = &w
 	return nil
@@ -874,7 +874,7 @@ func (s *Stratum) PrepWork() error {
 // PrepSubmit formats a mining.sumbit message from the solved work.
 func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	poolLog.Debugf("Stratum got valid work to submit %x", data)
-	poolLog.Debugf("Stratum got valid work hash %x",
+	poolLog.Debugf("Stratum got valid work hash %v",
 		chainhash.HashFuncH(data[0:180]))
 	data2 := make([]byte, 180)
 	copy(data2, data[0:180])

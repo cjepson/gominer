@@ -54,9 +54,9 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 }
 
 type Work struct {
-	Data   [192]byte
-	Target *big.Int
-	Nonce2 uint32
+	Data       [192]byte
+	Target     *big.Int
+	ExtraNonce uint32
 }
 
 type Device struct {
@@ -210,8 +210,11 @@ func (d *Device) updateCurrentWork() {
 
 	d.work = *w
 	minrLog.Tracef("pre-nonce: %v", hex.EncodeToString(d.work.Data[:]))
-	// Set nonce2
-	binary.LittleEndian.PutUint32(d.work.Data[124+4*nonce2Word:], d.work.Nonce2)
+
+	// Set extraNonce.
+	binary.LittleEndian.PutUint32(d.work.Data[128+4*nonce2Word:],
+		d.work.ExtraNonce)
+
 	// Reset the hash state
 	copy(d.midstate[:], blake256.IV256[:])
 
@@ -269,6 +272,12 @@ func (d *Device) testFoundCandidate() {
 	//stratum submit {"params": ["test", "76df", "0200000000a461f2e3014335", "5783c78e", "e38c6e00"], "id": 4, "method": "mining.submit"}
 }
 
+// Swap the endianness of a uint32 from big endian to little endian.
+func BEUint32LE(v uint32) uint32 {
+	return (v&0x000000FF)<<24 | (v&0x0000FF00)<<8 |
+		(v&0x00FF0000)>>8 | (v&0xFF000000)>>24
+}
+
 func (d *Device) runDevice() error {
 	minrLog.Infof("Started GPU #%d: %s", d.index, d.deviceName)
 	outputData := make([]uint32, outputBufferSize)
@@ -286,10 +295,8 @@ func (d *Device) runDevice() error {
 
 		// Increment nonce1
 		//d.lastBlock[nonce1Word]++
-		d.work.Nonce2++
-		var tmpBytes = make([]byte, 4)
-		binary.LittleEndian.PutUint32(tmpBytes, d.work.Nonce2)
-		d.lastBlock[nonce1Word] = binary.BigEndian.Uint32(tmpBytes)
+		d.work.ExtraNonce++
+		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
@@ -346,8 +353,8 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate: %d", outputData[i+1])
-			d.foundCandidate(d.lastBlock[nonce1Word], outputData[i+1])
+			minrLog.Debugf("Found candidate nonce %x, extraNonce %x", outputData[i+1], d.lastBlock[nonce1Word])
+			d.foundCandidate(outputData[i+1], d.lastBlock[nonce1Word])
 		}
 
 		d.workDoneLast += globalWorksize
@@ -355,7 +362,7 @@ func (d *Device) runDevice() error {
 	}
 }
 
-func (d *Device) foundCandidate(nonce1, nonce0 uint32) {
+func (d *Device) foundCandidate(nonce0, nonce1 uint32) {
 	// Construct the final block header
 	data := make([]byte, 192)
 	copy(data, d.work.Data[:])
