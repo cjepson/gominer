@@ -31,19 +31,20 @@ var chainParams = &chaincfg.MainNetParams
 // Stratum holds all the shared information for a stratum connection.
 // XXX most of these should be unexported and use getters/setters.
 type Stratum struct {
-	Pool      string
-	User      string
-	Pass      string
-	Conn      net.Conn
-	Reader    *bufio.Reader
-	ID        uint64
-	authID    uint64
-	subID     uint64
-	submitID  uint64
-	Diff      float64
-	Target    *big.Int
-	submitted bool
-	PoolWork  NotifyWork
+	Pool          string
+	User          string
+	Pass          string
+	Conn          net.Conn
+	Reader        *bufio.Reader
+	ID            uint64
+	authID        uint64
+	subID         uint64
+	submitID      uint64
+	Diff          float64
+	Target        *big.Int
+	submitted     bool
+	PoolWork      NotifyWork
+	latestJobTime uint32
 }
 
 // NotifyWork holds all the info recieved from a mining.notify message along
@@ -823,8 +824,10 @@ func (s *Stratum) PrepWork() error {
 	var w Work
 	copy(w.Data[:], workdata[:])
 	w.Target = s.Target
-	w.JobTime = binary.LittleEndian.Uint32(
+	givenTs := binary.LittleEndian.Uint32(
 		w.Data[128+4*timestampWord : 132+4*timestampWord])
+	w.JobTime = givenTs
+	s.latestJobTime = givenTs
 	w.TimeReceived = uint32(time.Now().Unix())
 
 	poolLog.Tracef("Stratum prepated work data %v, target %032x",
@@ -866,7 +869,8 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	s.submitID = s.ID
 	s.submitted = true
 
-	timestampStr := fmt.Sprintf("%08x", uint32(submittedHeader.Timestamp.Unix()))
+	// timestampStr := fmt.Sprintf("%08x", uint32(submittedHeader.Timestamp.Unix()))
+	timestampStr := fmt.Sprintf("%08x", s.latestJobTime)
 	nonceStr := fmt.Sprintf("%08x", submittedHeader.Nonce)
 	xnonceStr := hex.EncodeToString(data[144:156])
 
@@ -879,10 +883,10 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 
 // Various helper functions for formatting are below.
 
-// uint32Swap swaps the endianess of a slice of uint32s, swapping only uint32s
-// at a time. The number of bytes in the pointer passed must be a multiple of
-// 4. The underlying slice is modified.
-func uint32Swap(aPtr *[]byte) {
+// uint32SwapSlice swaps the endianess of a slice of uint32s, swapping only
+// uint32s at a time. The number of bytes in the pointer passed must be a
+// multiple of 4. The underlying slice is modified.
+func uint32SwapSlice(aPtr *[]byte) {
 	a := *aPtr
 	sz := len(a)
 	itrs := sz / 4
@@ -890,13 +894,6 @@ func uint32Swap(aPtr *[]byte) {
 		a[(i*4)], a[(i*4)+3] = a[(i*4)+3], a[i*4]
 		a[(i*4)+1], a[(i*4)+2] = a[(i*4)+2], a[(i*4)+1]
 	}
-}
-
-func encodeTime(t time.Time) []byte {
-	buf := make([]byte, 8)
-	u := uint64(t.Unix())
-	binary.BigEndian.PutUint64(buf, u)
-	return buf
 }
 
 func reverseS(s string) (string, error) {

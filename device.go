@@ -7,7 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
-	"time"
+	// 	"time"
 	"unsafe"
 
 	"github.com/decred/dcrd/blockchain"
@@ -336,9 +336,9 @@ func (d *Device) runDevice() error {
 
 		// Update the timestamp. This is pretty fucked up
 		// in the "stratum" protocol.
-		diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
-		ts := d.work.JobTime + diffSeconds
-		d.lastBlock[timestampWord] = Uint32EndiannessSwap(ts)
+		// diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
+		// ts := d.work.JobTime + diffSeconds
+		// d.lastBlock[timestampWord] = Uint32EndiannessSwap(ts)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
