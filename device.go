@@ -369,11 +369,11 @@ func (d *Device) foundCandidate(nonce0, nonce1 uint32) {
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
 	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	hash := chainhash.HashFuncH(data[0:180])
-	minrLog.Debugf("candidate hash: %x", hash)
+	minrLog.Debugf("candidate hash: %v", hash)
 
 	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(d.work.Target) > 0 {
-		minrLog.Infof("Hash %s below target %x", hash, d.work.Target.Bytes())
+		minrLog.Infof("Hash %v below target %032x", hash, d.work.Target.Bytes())
 	} else {
 		minrLog.Infof("Found hash!! %v", hash)
 		d.workDone <- data
