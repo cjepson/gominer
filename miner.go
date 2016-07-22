@@ -109,7 +109,7 @@ func (m *Miner) workSubmitThread() {
 					} else {
 						m.invalidShares++
 					}
-					minrLog.Errorf("Submitted work successfully: %v", accepted)
+					minrLog.Debugf("Submitted work successfully: %v", accepted)
 					m.needsWorkRefresh <- struct{}{}
 				}
 			} else {
@@ -123,7 +123,7 @@ func (m *Miner) workSubmitThread() {
 					} else {
 						m.invalidShares++
 					}
-					minrLog.Errorf("Submitted work to pool successfully: %v",
+					minrLog.Debugf("Submitted work to pool successfully: %v",
 						accepted)
 					m.needsWorkRefresh <- struct{}{}
 				}

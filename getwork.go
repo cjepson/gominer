@@ -300,9 +300,9 @@ func GetPoolWorkSubmit(data []byte, pool *Stratum) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	pool.submitted = true
 
+	pool.submitted = true
 	pool.PoolWork.Work = nil
 
-	return false, nil
+	return true, nil
 }
