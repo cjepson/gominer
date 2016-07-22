@@ -889,7 +889,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	poolLog.Debugf("valid work hash %x", chainhash.HashFuncB(data[0:180]))
 	data2 := make([]byte, 180)
 	copy(data2, data[0:180])
-	swapHeaderCrazyEndian(data2)
+	swapHeaderCrazyEndian(&data2)
 	poolLog.Debugf("valid work hash %x (crazy endian)", chainhash.HashFuncB(data2[0:180]))
 
 	sub := Submit{}
