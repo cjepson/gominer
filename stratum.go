@@ -873,7 +873,7 @@ func (s *Stratum) PrepWork() error {
 
 // PrepSubmit formats a mining.sumbit message from the solved work.
 func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
-	poolLog.Debugf("got valid work to submit %x", data)
+	poolLog.Debugf("Stratum got valid work to submit %x", data)
 	poolLog.Debugf("Stratum got valid work hash %x",
 		chainhash.HashFuncH(data[0:180]))
 	data2 := make([]byte, 180)
