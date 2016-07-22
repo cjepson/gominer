@@ -315,7 +315,9 @@ func (d *Device) runDevice() error {
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
-		status = cl.CLSetKernelArg(d.kernel, 0, cl.CL_size_t(unsafe.Sizeof(obuf)), unsafe.Pointer(&obuf))
+		status = cl.CLSetKernelArg(d.kernel, 0,
+			cl.CL_size_t(unsafe.Sizeof(obuf)),
+			unsafe.Pointer(&obuf))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg")
 		}
@@ -324,7 +326,8 @@ func (d *Device) runDevice() error {
 		for i := 0; i < 8; i++ {
 			//minrLog.Tracef("mid: %v: %v", i+1, d.midstate[i])
 			ms := d.midstate[i]
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1), uint32Size, unsafe.Pointer(&ms))
+			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1),
+				uint32Size, unsafe.Pointer(&ms))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
 			}
@@ -337,8 +340,8 @@ func (d *Device) runDevice() error {
 				i2++
 			}
 			lb := d.lastBlock[i2]
-			//minrLog.Tracef("lastblockused: %v: %v", i+9, lb)
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9), uint32Size, unsafe.Pointer(&lb))
+			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9),
+				uint32Size, unsafe.Pointer(&lb))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
 			}
@@ -346,7 +349,9 @@ func (d *Device) runDevice() error {
 		}
 
 		// Clear the found count from the buffer
-		status = cl.CLEnqueueWriteBuffer(d.queue, d.outputBuffer, cl.CL_FALSE, 0, uint32Size, unsafe.Pointer(&zeroSlice[0]), 0, nil, nil)
+		status = cl.CLEnqueueWriteBuffer(d.queue, d.outputBuffer,
+			cl.CL_FALSE, 0, uint32Size, unsafe.Pointer(&zeroSlice[0]),
+			0, nil, nil)
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLEnqueueWriteBuffer")
 		}
@@ -356,22 +361,32 @@ func (d *Device) runDevice() error {
 		globalWorkSize[0] = cl.CL_size_t(globalWorksize)
 		var localWorkSize [1]cl.CL_size_t
 		localWorkSize[0] = localWorksize
-		status = cl.CLEnqueueNDRangeKernel(d.queue, d.kernel, 1, nil, globalWorkSize[:], localWorkSize[:], 0, nil, nil)
+		status = cl.CLEnqueueNDRangeKernel(d.queue, d.kernel, 1, nil,
+			globalWorkSize[:], localWorkSize[:], 0, nil, nil)
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLEnqueueNDRangeKernel")
 		}
 
 		// Read the output buffer
-		cl.CLEnqueueReadBuffer(d.queue, d.outputBuffer, cl.CL_TRUE, 0, uint32Size*outputBufferSize, unsafe.Pointer(&outputData[0]), 0, nil, nil)
+		cl.CLEnqueueReadBuffer(d.queue, d.outputBuffer, cl.CL_TRUE, 0,
+			uint32Size*outputBufferSize, unsafe.Pointer(&outputData[0]), 0,
+			nil, nil)
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLEnqueueReadBuffer")
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate nonce %x, extraNonce %x", outputData[i+1], d.lastBlock[nonce1Word])
-			d.lastValidExtraNonce = d.lastBlock[nonce1Word]
+			minrLog.Debugf("Found candidate nonce %x, extraNonce %x",
+				outputData[i+1], d.lastBlock[nonce1Word])
+
+			// Assess the work. If it's below target, it'll be rejected
+			// here. The mining algorithm currently sends this loop any
+			// difficulty 1 shares.
 			d.foundCandidate(outputData[i+1], d.lastBlock[nonce1Word])
 		}
+
+		// Avoid doing the same work over again.
+		d.lastValidExtraNonce = d.work.ExtraNonce + 1
 
 		d.workDoneLast += globalWorksize
 		d.workDoneTotal += globalWorksize
@@ -385,13 +400,12 @@ func (d *Device) foundCandidate(nonce0, nonce1 uint32) {
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
 	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	hash := chainhash.HashFuncH(data[0:180])
-	minrLog.Debugf("candidate hash: %v", hash)
 
 	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(d.work.Target) > 0 {
 		minrLog.Infof("Hash %v below target %032x", hash, d.work.Target.Bytes())
 	} else {
-		minrLog.Infof("Found hash!! %v", hash)
+		minrLog.Infof("Found hash with work above target! %v", hash)
 		d.workDone <- data
 	}
 }
