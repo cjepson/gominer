@@ -713,14 +713,15 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 
 // PrepWork converts the stratum notify to getwork style data for mining.
 func (s *Stratum) PrepWork() error {
-	// Build final extranonce
+	// Build final extranonce, which is basically the pool user and worker
+	// ID.
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
 	if err != nil {
 		poolLog.Error("Error decoding ExtraNonce1.")
 		return err
 	}
-	poolLog.Debugf("en1 %x s.PoolWork.ExtraNonce1 %v", en1, s.PoolWork.ExtraNonce1)
-	// Work out padding
+
+	// Work out padding.
 	tmp := []string{"%0", strconv.Itoa(int(s.PoolWork.ExtraNonce2Length) * 2), "x"}
 	fmtString := strings.Join(tmp, "")
 	en2, err := hex.DecodeString(fmt.Sprintf(fmtString, s.PoolWork.ExtraNonce2))
@@ -728,45 +729,23 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		return err
 	}
-	poolLog.Tracef("en2 %x s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Tracef("extra data (uid) %x", extraNonce)
 
-	// Increase extranonce2
-	// s.PoolWork.ExtraNonce2++
-
-	// Put coinbase transaction together
+	// Put coinbase transaction together.
 	cb1, err := hex.DecodeString(s.PoolWork.CB1)
 	if err != nil {
 		poolLog.Error("Error decoding Coinbase pt 1.")
 		return err
 	}
-	poolLog.Debugf("cb1 %v s.PoolWork.CB1 %v", cb1, s.PoolWork.CB1)
 
-	// I've never actually seen a cb2.
-	cb2, err := hex.DecodeString(s.PoolWork.CB2)
-	if err != nil {
-		poolLog.Error("Error decoding Coinbase pt 2.")
-		return err
-	}
-	poolLog.Debugf("cb2 %v s.PoolWork.CB2 %v", cb2, s.PoolWork.CB2)
+	// cb2 is never actually sent, so don't try to decode it.
 
-	cb := append(cb1[:], extraNonce[:]...)
-	cb = append(cb[:], cb2[:]...)
-	poolLog.Debugf("cb %x", cb)
-
-	// Calculate merkle root
-	// I have never seen anything sent in the merkle tree
-	// sent by the pool so not much I can do here.
-	// Confirmed in ccminer code.
-	// Same for StakeRoot
-
-	// Generate current ntime
+	// Generate current ntime.
 	ntime := time.Now().Unix() + s.PoolWork.NtimeDelta
 
 	poolLog.Tracef("ntime: %x", ntime)
 
-	// Serialize header
+	// Serialize header.
 	bh := wire.BlockHeader{}
 	v, err := reverseToInt(s.PoolWork.Version)
 	if err != nil {
@@ -792,10 +771,7 @@ func (s *Stratum) PrepWork() error {
 	}
 
 	data := blockHeader
-	poolLog.Debugf("data0 %x", data)
-	poolLog.Tracef("data len %v", len(data))
 	copy(data[31:139], cb1[0:108])
-	poolLog.Debugf("data1 %x", data)
 
 	var workdata [180]byte
 	workPosition := 0
@@ -806,8 +782,6 @@ func (s *Stratum) PrepWork() error {
 		return err
 	}
 	copy(workdata[workPosition:], version.Bytes())
-	poolLog.Debugf("appended version.Bytes() %x", version.Bytes())
-	poolLog.Tracef("partial workdata (version): %x", hex.EncodeToString(workdata[:]))
 
 	prevHash := revHash(s.PoolWork.Hash)
 	p, err := hex.DecodeString(prevHash)
@@ -818,52 +792,25 @@ func (s *Stratum) PrepWork() error {
 
 	workPosition += 4
 	copy(workdata[workPosition:], p)
-	poolLog.Tracef("partial workdata (previous hash): %v", hex.EncodeToString(workdata[:]))
-	poolLog.Debugf("prevHash %v", prevHash)
-
 	workPosition += 32
 	copy(workdata[workPosition:], cb1[0:108])
-	poolLog.Tracef("partial workdata (cb1): %v", hex.EncodeToString(workdata[:]))
-
 	workPosition += 108
 	copy(workdata[workPosition:], extraNonce)
-	poolLog.Debugf("extranonce: %v", hex.EncodeToString(extraNonce))
-	poolLog.Tracef("partial workdata (extranonce): %v", hex.EncodeToString(workdata[:]))
 
 	var randomBytes = make([]byte, 4)
 	_, err = rand.Read(randomBytes)
 	if err != nil {
 		poolLog.Errorf("Unable to generate random bytes")
+		return err
 	}
 	workPosition += 4
-	// XXX would be nice to enable a static 'random' number here for tests
-	//binary.LittleEndian.PutUint32(randomBytes, 4066485248)
-	//poolLog.Tracef("Random data: %v at: %v", randomBytes, workPosition)
-	//copy(workdata[workPosition:], randomBytes)
 
-	poolLog.Debugf("workdata len %v", len(workdata))
-	poolLog.Tracef("workdata %v", hex.EncodeToString(workdata[:]))
-
-	/*var empty = []byte{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-	}
-	copy(w.Data[:], empty[:])*/
 	var w Work
 	copy(w.Data[:], workdata[:])
 	w.Target = s.Target
 
-	poolLog.Tracef("final data %v, target %v", hex.EncodeToString(w.Data[:]), w.Target)
+	poolLog.Tracef("Stratum prepated work data %v, target %032x",
+		hex.EncodeToString(w.Data[:]), w.Target.Bytes())
 	s.PoolWork.Work = &w
 	return nil
 
@@ -896,43 +843,17 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 		return sub, err
 	}
 
-	//en2 := strconv.FormatUint(s.PoolWork.ExtraNonce2, 16)
-	nonce := fmt.Sprintf("%08x", submittedHeader.Nonce)
-	time := encodeTime(submittedHeader.Timestamp)
-
-	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)
-	if err != nil {
-		poolLog.Error("Error decoding ExtraNonce1.")
-		//return err
-	}
-	poolLog.Tracef("en1 %v s.PoolWork.ExtraNonce1 %v", en1, s.PoolWork.ExtraNonce1)
-	// Work out padding
-	tmp := []string{"%0", strconv.Itoa(int(s.PoolWork.ExtraNonce2Length) * 2), "x"}
-	fmtString := strings.Join(tmp, "")
-	en2, err := hex.DecodeString(fmt.Sprintf(fmtString, s.PoolWork.ExtraNonce2))
-	if err != nil {
-		poolLog.Error("Error decoding ExtraNonce2.")
-		//return err
-	}
-	poolLog.Errorf("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
-	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Errorf("extraNonce %v", extraNonce)
-
 	s.ID++
 	sub.ID = s.ID
 	s.submitID = s.ID
 	s.submitted = true
 
-	poolLog.Tracef("ntime %v", s.PoolWork.Ntime)
+	nonceStr := fmt.Sprintf("%08x", submittedHeader.Nonce)
+	xnonceStr := hex.EncodeToString(data[144:156])
 
-	poolLog.Tracef("raw User %v JobId %v xnonce2 %v xnonce2length %v time %v nonce %v", s.User, s.PoolWork.JobID, s.PoolWork.ExtraNonce2, s.PoolWork.ExtraNonce2Length, submittedHeader.Timestamp, submittedHeader.Nonce)
-
-	xnonce2str := hex.EncodeToString(data[144:156])
-
-	poolLog.Tracef("encoded User %v JobId %v xnonce2 %v time %v nonce %v", s.User, s.PoolWork.JobID, xnonce2str, string(time), nonce)
-
-	sub.Params = []string{s.User, s.PoolWork.JobID, xnonce2str, s.PoolWork.Ntime, nonce}
 	// pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr
+	sub.Params = []string{s.User, s.PoolWork.JobID, xnonceStr, s.PoolWork.Ntime,
+		nonceStr}
 
 	return sub, nil
 }
@@ -946,7 +867,6 @@ func uint32Swap(aPtr *[]byte) {
 	a := *aPtr
 	sz := len(a)
 	itrs := sz / 4
-	fmt.Printf("a %x\n", a)
 	for i := 0; i < itrs; i++ {
 		a[(i*4)], a[(i*4)+3] = a[(i*4)+3], a[i*4]
 		a[(i*4)+1], a[(i*4)+2] = a[(i*4)+2], a[(i*4)+1]
