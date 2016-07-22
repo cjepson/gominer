@@ -284,6 +284,12 @@ func (d *Device) runDevice() error {
 	globalWorksize := math.Exp2(float64(cfg.Intensity))
 	minrLog.Debugf("Intensity %v", cfg.Intensity)
 	var status cl.CL_int
+
+	// Bump the extraNonce for the device it's running on.
+	// This ensures each GPU is doing different work.
+	d.work.ExtraNonce += uint32(d.index) << 24
+	d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
+
 	for {
 		d.updateCurrentWork()
 
