@@ -178,13 +178,12 @@ func (m *Miner) workRefreshThread() {
 				}
 			}
 		} else {
-			work, err := GetPoolWork(m.pool)
-			if err != nil {
-				minrLog.Errorf("Error in getpoolwork: %v", err)
-			} else {
-				for _, d := range m.devices {
-					// Only update the work if new work comes in.
-					if d.work.Data != work.Data {
+			if m.pool.PoolWork.NewWork {
+				work, err := GetPoolWork(m.pool)
+				if err != nil {
+					minrLog.Errorf("Error in getpoolwork: %v", err)
+				} else {
+					for _, d := range m.devices {
 						d.SetWork(work)
 					}
 				}

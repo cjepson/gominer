@@ -205,7 +205,7 @@ func GetPoolWork(pool *Stratum) (*Work, error) {
 		}
 
 		intJob, _ := strconv.ParseInt(pool.PoolWork.JobID, 16, 0)
-		poolLog.Infof("job %v height %v", intJob, pool.PoolWork.Height)
+		poolLog.Debugf("new job %v height %v", intJob, pool.PoolWork.Height)
 
 		return pool.PoolWork.Work, nil
 	}
