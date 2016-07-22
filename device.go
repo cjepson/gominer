@@ -54,9 +54,8 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 }
 
 type Work struct {
-	Data       [192]byte
-	Target     *big.Int
-	ExtraNonce uint32
+	Data   [192]byte
+	Target *big.Int
 }
 
 type Device struct {
@@ -70,7 +69,15 @@ type Device struct {
 	program      cl.CL_program
 	kernel       cl.CL_kernel
 
-	lastValidExtraNonce uint32
+	// extraNonce is the device extraNonce, where the first
+	// byte is the device ID (supporting up to 255 devices)
+	// while the last 3 bytes is the extraNonce value. If
+	// the extraNonce goes through all 0x??FFFFFF values,
+	// it will reset to 0x??000000 automatically. As long
+	// as the miner can't go through this many extra nonce
+	// values rapidly (GPUs currently can not), this should
+	// prevent the device from doing extra work.
+	extraNonce uint32
 
 	midstate  [8]uint32
 	lastBlock [16]uint32
@@ -215,7 +222,7 @@ func (d *Device) updateCurrentWork() {
 
 	// Set extraNonce.
 	binary.LittleEndian.PutUint32(d.work.Data[128+4*nonce2Word:],
-		d.work.ExtraNonce)
+		d.extraNonce)
 
 	// Reset the hash state
 	copy(d.midstate[:], blake256.IV256[:])
@@ -280,6 +287,15 @@ func BEUint32LE(v uint32) uint32 {
 		(v&0x00FF0000)>>8 | (v&0xFF000000)>>24
 }
 
+// rolloverExtraNonce rolls over the extraNonce if it goes over 0x00FFFFFF many
+// hashes, since the first byte is reserved for the ID.
+func rolloverExtraNonce(v *uint32) {
+	if *v&0x00FFFFFF == 0x00FFFFFF {
+		*v = *v & 0xFF000000
+	} else {
+		*v++
+	}
+}
 func (d *Device) runDevice() error {
 	minrLog.Infof("Started GPU #%d: %s", d.index, d.deviceName)
 	outputData := make([]uint32, outputBufferSize)
@@ -291,13 +307,8 @@ func (d *Device) runDevice() error {
 	// when you begin mining. This ensures each GPU is doing
 	// different work. If the extraNonce has already been
 	// set for valid work, restore that.
-	if d.lastValidExtraNonce == 0 {
-		d.work.ExtraNonce += uint32(d.index) << 24
-		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
-	} else {
-		d.work.ExtraNonce = d.lastValidExtraNonce
-		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
-	}
+	d.extraNonce += uint32(d.index) << 24
+	d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
 
 	for {
 		d.updateCurrentWork()
@@ -310,8 +321,8 @@ func (d *Device) runDevice() error {
 
 		// Increment nonce1
 		//d.lastBlock[nonce1Word]++
-		d.work.ExtraNonce++
-		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
+		rolloverExtraNonce(&d.extraNonce)
+		d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
@@ -384,9 +395,6 @@ func (d *Device) runDevice() error {
 			// difficulty 1 shares.
 			d.foundCandidate(outputData[i+1], d.lastBlock[nonce1Word])
 		}
-
-		// Avoid doing the same work over again.
-		d.lastValidExtraNonce = d.work.ExtraNonce + 1
 
 		d.workDoneLast += globalWorksize
 		d.workDoneTotal += globalWorksize
