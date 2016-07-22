@@ -149,10 +149,12 @@ func StratumConn(pool, user, pass string) (*Stratum, error) {
 	stratum.Pool = pool
 	stratum.User = user
 	stratum.Pass = pass
+
 	// We will set it for sure later but this really should be the value and
 	// setting it here will prevent so incorrect matches based on the
 	// default 0 value.
 	stratum.authID = 2
+
 	// Target for share is 1 unless we hear otherwise.
 	stratum.Diff = 1
 	stratum.Target = diffToTarget(stratum.Diff)
@@ -218,12 +220,14 @@ func (s *Stratum) Listen() {
 			}
 			continue
 		}
+
 		poolLog.Debug(strings.TrimSuffix(result, "\n"))
 		resp, err := s.Unmarshal([]byte(result))
 		if err != nil {
 			poolLog.Error(err)
 			continue
 		}
+
 		switch resp.(type) {
 		case *BasicReply:
 			aResp := resp.(*BasicReply)
@@ -242,6 +246,7 @@ func (s *Stratum) Listen() {
 				}
 				s.submitted = false
 			}
+
 		case StratumMsg:
 			nResp := resp.(StratumMsg)
 			poolLog.Trace(nResp)
@@ -268,6 +273,7 @@ func (s *Stratum) Listen() {
 					// the channel to end everything.
 					return
 				}
+
 			case "client.get_version":
 				poolLog.Debug("get_version request received.")
 				msg := StratumMsg{
@@ -291,18 +297,18 @@ func (s *Stratum) Listen() {
 					continue
 				}
 			}
+
 		case NotifyRes:
 			nResp := resp.(NotifyRes)
 			s.PoolWork.JobID = nResp.JobID
 			s.PoolWork.CB1 = nResp.GenTX1
-			//poolLog.Trace("CB1: " + spew.Sdump(s.PoolWork.CB1))
-			//height := nResp.GenTX1[184:188]
 			heightHex := nResp.GenTX1[186:188] + nResp.GenTX1[184:186]
 			height, err := strconv.ParseInt(heightHex, 16, 32)
 			if err != nil {
 				poolLog.Tracef("failed to parse height %v", err)
 				height = 0
 			}
+
 			s.PoolWork.Height = height
 			s.PoolWork.CB2 = nResp.GenTX2
 			s.PoolWork.Hash = nResp.Hash
@@ -312,17 +318,20 @@ func (s *Stratum) Listen() {
 			if err != nil {
 				poolLog.Error(err)
 			}
+
 			s.PoolWork.Ntime = nResp.Ntime
 			s.PoolWork.NtimeDelta = parsedNtime - time.Now().Unix()
 			s.PoolWork.Clean = nResp.CleanJobs
 			s.PoolWork.NewWork = true
 			poolLog.Trace("notify: ", spew.Sdump(nResp))
+
 		case *SubscribeReply:
 			nResp := resp.(*SubscribeReply)
 			s.PoolWork.ExtraNonce1 = nResp.ExtraNonce1
 			s.PoolWork.ExtraNonce2Length = nResp.ExtraNonce2Length
 			poolLog.Info("Subscribe reply received.")
 			poolLog.Trace(spew.Sdump(resp))
+
 		default:
 			poolLog.Info("Unhandled message: ", result)
 		}
@@ -400,7 +409,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		return nil, err
 	}
 	// decode command
-	// Not everyone has a method
+	// Not everyone has a method.
 	err = json.Unmarshal(objmap["method"], &method)
 	if err != nil {
 		method = ""
@@ -498,6 +507,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			for i := 0; i < len(innerMsg); i++ {
 				if innerMsg[i][0] == "mining.notify" {
 					resp.SubscribeID = innerMsg[i][1]
@@ -512,8 +522,8 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 					// we ignore.
 				}
 			}
-
 		}
+
 		resp.ExtraNonce1 = resi[1].(string)
 		resp.ExtraNonce2Length = resi[2].(float64)
 		return resp, nil
@@ -615,6 +625,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		}
 		nres.CleanJobs = cleanJobs
 		return nres, nil
+
 	case "mining.set_difficulty":
 		poolLog.Trace("Received new difficulty.")
 		var resi []interface{}
@@ -637,6 +648,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		nres.Params = params
 		poolLog.Infof("Stratum difficulty set to %v", difficulty)
 		return nres, nil
+
 	case "client.show_message":
 		var resi []interface{}
 		err := json.Unmarshal(objmap["result"], &resi)
@@ -653,6 +665,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		params = append(params, msg)
 		nres.Params = params
 		return nres, nil
+
 	case "client.get_version":
 		var nres = StratumMsg{}
 		var id uint64
@@ -663,6 +676,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		nres.Method = method
 		nres.ID = id
 		return nres, nil
+
 	case "client.reconnect":
 		var nres = StratumMsg{}
 		var id uint64
@@ -701,6 +715,7 @@ func (s *Stratum) Unmarshal(blob []byte) (interface{}, error) {
 		nres.Params = []string{hostname, port, wait}
 
 		return nres, nil
+
 	default:
 		resp := &StratumRsp{}
 		err := json.Unmarshal(blob, &resp)
@@ -924,7 +939,9 @@ func revHash(hash string) string {
 	revHash := ""
 	for i := 0; i < 7; i++ {
 		j := i * 8
-		part := fmt.Sprintf("%c%c%c%c%c%c%c%c", hash[6+j], hash[7+j], hash[4+j], hash[5+j], hash[2+j], hash[3+j], hash[0+j], hash[1+j])
+		part := fmt.Sprintf("%c%c%c%c%c%c%c%c",
+			hash[6+j], hash[7+j], hash[4+j], hash[5+j],
+			hash[2+j], hash[3+j], hash[0+j], hash[1+j])
 		revHash += part
 	}
 	return revHash

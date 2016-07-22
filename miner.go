@@ -25,12 +25,14 @@ func getCLPlatforms() ([]cl.CL_platform_id, error) {
 // getCLDevices returns the list of devices for the given platform.
 func getCLDevices(platform cl.CL_platform_id) ([]cl.CL_device_id, error) {
 	var numDevices cl.CL_uint
-	status := cl.CLGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_GPU, 0, nil, &numDevices)
+	status := cl.CLGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_GPU, 0, nil,
+		&numDevices)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLGetDeviceIDs")
 	}
 	devices := make([]cl.CL_device_id, numDevices)
-	status = cl.CLGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_ALL, numDevices, devices, nil)
+	status = cl.CLGetDeviceIDs(platform, cl.CL_DEVICE_TYPE_ALL, numDevices,
+		devices, nil)
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLGetDeviceIDs")
 	}
@@ -106,7 +108,8 @@ func (m *Miner) workSubmitThread() {
 				if err != nil {
 					minrLog.Errorf("Error submitting work to pool: %v", err)
 				} else {
-					minrLog.Errorf("Submitted work to pool successfully: %v", accepted)
+					minrLog.Errorf("Submitted work to pool successfully: %v",
+						accepted)
 					m.needsWorkRefresh <- struct{}{}
 				}
 			}
