@@ -719,7 +719,7 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce1.")
 		return err
 	}
-	poolLog.Debugf("en1 %v s.PoolWork.ExtraNonce1 %v", en1, s.PoolWork.ExtraNonce1)
+	poolLog.Debugf("en1 %x s.PoolWork.ExtraNonce1 %v", en1, s.PoolWork.ExtraNonce1)
 	// Work out padding
 	tmp := []string{"%0", strconv.Itoa(int(s.PoolWork.ExtraNonce2Length) * 2), "x"}
 	fmtString := strings.Join(tmp, "")
@@ -728,15 +728,14 @@ func (s *Stratum) PrepWork() error {
 		poolLog.Error("Error decoding ExtraNonce2.")
 		return err
 	}
-	poolLog.Tracef("en2 %v s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
+	poolLog.Tracef("en2 %vx s.PoolWork.ExtraNonce2 %v", en2, s.PoolWork.ExtraNonce2)
 	extraNonce := append(en1[:], en2[:]...)
-	poolLog.Tracef("extraNonce %v", extraNonce)
+	poolLog.Tracef("extra data (uid) %x", extraNonce)
 
 	// Increase extranonce2
 	// s.PoolWork.ExtraNonce2++
 
 	// Put coinbase transaction together
-
 	cb1, err := hex.DecodeString(s.PoolWork.CB1)
 	if err != nil {
 		poolLog.Error("Error decoding Coinbase pt 1.")
@@ -754,7 +753,7 @@ func (s *Stratum) PrepWork() error {
 
 	cb := append(cb1[:], extraNonce[:]...)
 	cb = append(cb[:], cb2[:]...)
-	poolLog.Debugf("cb %v", cb)
+	poolLog.Debugf("cb %x", cb)
 
 	// Calculate merkle root
 	// I have never seen anything sent in the merkle tree
@@ -765,7 +764,7 @@ func (s *Stratum) PrepWork() error {
 	// Generate current ntime
 	ntime := time.Now().Unix() + s.PoolWork.NtimeDelta
 
-	poolLog.Tracef("ntime: %v", ntime)
+	poolLog.Tracef("ntime: %x", ntime)
 
 	// Serialize header
 	bh := wire.BlockHeader{}
@@ -793,10 +792,10 @@ func (s *Stratum) PrepWork() error {
 	}
 
 	data := blockHeader
-	poolLog.Debugf("data0 %v", data)
+	poolLog.Debugf("data0 %x", data)
 	poolLog.Tracef("data len %v", len(data))
 	copy(data[31:139], cb1[0:108])
-	poolLog.Debugf("data1 %v", data)
+	poolLog.Debugf("data1 %x", data)
 
 	var workdata [180]byte
 	workPosition := 0
@@ -807,8 +806,8 @@ func (s *Stratum) PrepWork() error {
 		return err
 	}
 	copy(workdata[workPosition:], version.Bytes())
-	poolLog.Debugf("appended version.Bytes() %v", version.Bytes())
-	poolLog.Tracef("partial workdata (version): %v", hex.EncodeToString(workdata[:]))
+	poolLog.Debugf("appended version.Bytes() %x", version.Bytes())
+	poolLog.Tracef("partial workdata (version): %x", hex.EncodeToString(workdata[:]))
 
 	prevHash := revHash(s.PoolWork.Hash)
 	p, err := hex.DecodeString(prevHash)
@@ -839,12 +838,11 @@ func (s *Stratum) PrepWork() error {
 	workPosition += 4
 	// XXX would be nice to enable a static 'random' number here for tests
 	//binary.LittleEndian.PutUint32(randomBytes, 4066485248)
-	poolLog.Tracef("Random data: %v at: %v", randomBytes, workPosition)
-	copy(workdata[workPosition:], randomBytes)
+	//poolLog.Tracef("Random data: %v at: %v", randomBytes, workPosition)
+	//copy(workdata[workPosition:], randomBytes)
 
 	poolLog.Debugf("workdata len %v", len(workdata))
 	poolLog.Tracef("workdata %v", hex.EncodeToString(workdata[:]))
-	*/
 
 	/*var empty = []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
