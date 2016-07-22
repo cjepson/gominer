@@ -823,6 +823,9 @@ func (s *Stratum) PrepWork() error {
 	var w Work
 	copy(w.Data[:], workdata[:])
 	w.Target = s.Target
+	w.JobTime = binary.LittleEndian.Uint32(
+		w.Data[128+4*timestampWord : 132+4*timestampWord])
+	w.TimeReceived = Uint32EndiannessSwap(uint32(time.Now().Unix()))
 
 	poolLog.Tracef("Stratum prepated work data %v, target %032x",
 		hex.EncodeToString(w.Data[:]), w.Target.Bytes())

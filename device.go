@@ -56,8 +56,10 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 }
 
 type Work struct {
-	Data   [192]byte
-	Target *big.Int
+	Data         [192]byte
+	Target       *big.Int
+	JobTime      uint32
+	TimeReceived uint32
 }
 
 type Device struct {
@@ -92,11 +94,14 @@ type Device struct {
 	workDoneTotal float64
 	runningTime   float64
 
+	validShares   uint64
+	invalidShares uint64
+
 	quit chan struct{}
 }
 
-// Swap the endianness of a uint32 from big endian to little endian.
-func BEUint32LE(v uint32) uint32 {
+// Uint32EndiannessSwap swaps the endianness of a uint32.
+func Uint32EndiannessSwap(v uint32) uint32 {
 	return (v&0x000000FF)<<24 | (v&0x0000FF00)<<8 |
 		(v&0x00FF0000)>>8 | (v&0xFF000000)>>24
 }
@@ -112,6 +117,10 @@ func rolloverExtraNonce(v *uint32) {
 }
 
 func clError(status cl.CL_int, f string) error {
+	if -status < 0 || int(-status) > len(cl.ERROR_CODES_STRINGS) {
+		return fmt.Errorf("%s returned unknown error!")
+	}
+
 	return fmt.Errorf("%s returned error %s (%d)", f,
 		cl.ERROR_CODES_STRINGS[-status], status)
 }
@@ -310,7 +319,7 @@ func (d *Device) runDevice() error {
 	// different work. If the extraNonce has already been
 	// set for valid work, restore that.
 	d.extraNonce += uint32(d.index) << 24
-	d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
+	d.lastBlock[nonce1Word] = Uint32EndiannessSwap(d.extraNonce)
 
 	for {
 		d.updateCurrentWork()
@@ -323,11 +332,13 @@ func (d *Device) runDevice() error {
 
 		// Increment extraNonce.
 		rolloverExtraNonce(&d.extraNonce)
-		d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
+		d.lastBlock[nonce1Word] = Uint32EndiannessSwap(d.extraNonce)
 
-		// Update the timestamp.
-		ts := uint32(time.Now().Unix())
-		d.lastBlock[timestampWord] = BEUint32LE(ts)
+		// Update the timestamp. This is pretty fucked up
+		// in the "stratum" protocol.
+		diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
+		ts := d.work.JobTime + diffSeconds
+		d.lastBlock[timestampWord] = Uint32EndiannessSwap(ts)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
@@ -393,7 +404,8 @@ func (d *Device) runDevice() error {
 		for i := uint32(0); i < outputData[0]; i++ {
 			minrLog.Debugf("Found candidate nonce %x, extraNonce %x, workID "+
 				"%08x, timestamp %08x",
-				outputData[i+1], d.lastBlock[nonce1Word], d.currentWorkID,
+				outputData[i+1], d.lastBlock[nonce1Word],
+				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])
 
 			// Assess the work. If it's below target, it'll be rejected
@@ -419,9 +431,10 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 
 	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(d.work.Target) > 0 {
-		minrLog.Infof("Hash %v below target %032x", hash, d.work.Target.Bytes())
+		minrLog.Debugf("Hash %v below target %032x", hash, d.work.Target.Bytes())
 	} else {
 		minrLog.Infof("Found hash with work above target! %v", hash)
+		d.validShares++
 		d.workDone <- data
 	}
 }
@@ -478,7 +491,10 @@ func (d *Device) PrintStats() {
 	d.workDoneLast = 0
 	d.runningTime += 5.0
 
-	minrLog.Infof("GPU #%d: %s, EMA %s avg %s", d.index, d.deviceName,
+	minrLog.Infof("GPU #%d: %s, EMA %s avg %s (valid shares from GPU: %v)",
+		d.index,
+		d.deviceName,
 		formatHashrate(d.workDoneEMA),
-		formatHashrate(d.workDoneTotal/d.runningTime))
+		formatHashrate(d.workDoneTotal/d.runningTime),
+		d.validShares)
 }

@@ -46,6 +46,9 @@ type Miner struct {
 	needsWorkRefresh chan struct{}
 	wg               sync.WaitGroup
 	pool             *Stratum
+
+	validShares   uint64
+	invalidShares uint64
 }
 
 func NewMiner() (*Miner, error) {
@@ -98,16 +101,20 @@ func (m *Miner) workSubmitThread() {
 			if m.pool == nil {
 				accepted, err := GetWorkSubmit(data)
 				if err != nil {
+					m.invalidShares++
 					minrLog.Errorf("Error submitting work: %v", err)
 				} else {
+					m.validShares++
 					minrLog.Errorf("Submitted work successfully: %v", accepted)
 					m.needsWorkRefresh <- struct{}{}
 				}
 			} else {
 				accepted, err := GetPoolWorkSubmit(data, m.pool)
 				if err != nil {
+					m.invalidShares++
 					minrLog.Errorf("Error submitting work to pool: %v", err)
 				} else {
+					m.validShares++
 					minrLog.Errorf("Submitted work to pool successfully: %v",
 						accepted)
 					m.needsWorkRefresh <- struct{}{}
@@ -160,6 +167,8 @@ func (m *Miner) printStatsThread() {
 	defer t.Stop()
 
 	for {
+		minrLog.Infof("Total accepted shares: %v, total rejected shares: %v",
+			m.validShares, m.invalidShares)
 		for _, d := range m.devices {
 			d.PrintStats()
 		}
