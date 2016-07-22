@@ -163,7 +163,7 @@ func (m *Miner) workSubmitThread() {
 func (m *Miner) workRefreshThread() {
 	defer m.wg.Done()
 
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
 	for {
@@ -183,7 +183,10 @@ func (m *Miner) workRefreshThread() {
 				minrLog.Errorf("Error in getpoolwork: %v", err)
 			} else {
 				for _, d := range m.devices {
-					d.SetWork(work)
+					// Only update the work if new work comes in.
+					if d.work.Data != work.Data {
+						d.SetWork(work)
+					}
 				}
 			}
 		}
