@@ -385,8 +385,8 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate nonce %x, extraNonce %x",
-				outputData[i+1], d.lastBlock[nonce1Word])
+			minrLog.Debugf("Found candidate nonce %x, extraNonce %x, workID %08x",
+				outputData[i+1], d.lastBlock[nonce1Word], d.currentWorkID)
 
 			// Assess the work. If it's below target, it'll be rejected
 			// here. The mining algorithm currently sends this loop any
