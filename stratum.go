@@ -897,7 +897,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	}
 
 	//en2 := strconv.FormatUint(s.PoolWork.ExtraNonce2, 16)
-	nonce := fmt.Sprintf("%08x", submittedHeader.Nonce) // strconv.FormatUint(uint64(submittedHeader.Nonce), 16)
+	nonce := fmt.Sprintf("%08x", submittedHeader.Nonce)
 	time := encodeTime(submittedHeader.Timestamp)
 
 	en1, err := hex.DecodeString(s.PoolWork.ExtraNonce1)

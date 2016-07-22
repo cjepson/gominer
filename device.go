@@ -70,6 +70,8 @@ type Device struct {
 	program      cl.CL_program
 	kernel       cl.CL_kernel
 
+	lastValidExtraNonce uint32
+
 	midstate  [8]uint32
 	lastBlock [16]uint32
 
@@ -285,10 +287,17 @@ func (d *Device) runDevice() error {
 	minrLog.Debugf("Intensity %v", cfg.Intensity)
 	var status cl.CL_int
 
-	// Bump the extraNonce for the device it's running on.
-	// This ensures each GPU is doing different work.
-	d.work.ExtraNonce += uint32(d.index) << 24
-	d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
+	// Bump the extraNonce for the device it's running on
+	// when you begin mining. This ensures each GPU is doing
+	// different work. If the extraNonce has already been
+	// set for valid work, restore that.
+	if d.lastValidExtraNonce == 0 {
+		d.work.ExtraNonce += uint32(d.index) << 24
+		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
+	} else {
+		d.work.ExtraNonce = d.lastValidExtraNonce
+		d.lastBlock[nonce1Word] = BEUint32LE(d.work.ExtraNonce)
+	}
 
 	for {
 		d.updateCurrentWork()
@@ -360,6 +369,7 @@ func (d *Device) runDevice() error {
 
 		for i := uint32(0); i < outputData[0]; i++ {
 			minrLog.Debugf("Found candidate nonce %x, extraNonce %x", outputData[i+1], d.lastBlock[nonce1Word])
+			d.lastValidExtraNonce = d.lastBlock[nonce1Word]
 			d.foundCandidate(outputData[i+1], d.lastBlock[nonce1Word])
 		}
 
