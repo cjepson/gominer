@@ -863,7 +863,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	s.submitID = s.ID
 	s.submitted = true
 
-	timestampStr := fmt.Sprintf("%08x", submittedHeader.Timestamp)
+	timestampStr := fmt.Sprintf("%08x", uint32(submittedHeader.Timestamp.Unix()))
 	nonceStr := fmt.Sprintf("%08x", submittedHeader.Nonce)
 	xnonceStr := hex.EncodeToString(data[144:156])
 

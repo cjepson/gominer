@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/decred/dcrd/blockchain"
@@ -21,9 +22,10 @@ const (
 	localWorksize    = 64
 	uint32Size       = cl.CL_size_t(unsafe.Sizeof(cl.CL_uint(0)))
 
-	nonce0Word = 3
-	nonce1Word = 4
-	nonce2Word = 5
+	timestampWord = 2
+	nonce0Word    = 3
+	nonce1Word    = 4
+	nonce2Word    = 5
 )
 
 var zeroSlice = []cl.CL_uint{cl.CL_uint(0)}
@@ -289,7 +291,7 @@ func (d *Device) testFoundCandidate() {
 	minrLog.Errorf("target: %v", d.work.Target)
 	minrLog.Errorf("nonce1 %x, nonce0: %x", n1, n0)
 
-	d.foundCandidate(n1, n0)
+	// d.foundCandidate(n1, n0, ts)
 
 	//need to match
 	//00000000df6ffb6059643a9215f95751baa7b1ed8aa93edfeb9a560ecb1d5884
@@ -322,6 +324,10 @@ func (d *Device) runDevice() error {
 		// Increment extraNonce.
 		rolloverExtraNonce(&d.extraNonce)
 		d.lastBlock[nonce1Word] = BEUint32LE(d.extraNonce)
+
+		// Update the timestamp.
+		ts := uint32(time.Now().Unix())
+		d.lastBlock[timestampWord] = BEUint32LE(ts)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
@@ -385,13 +391,16 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate nonce %x, extraNonce %x, workID %08x",
-				outputData[i+1], d.lastBlock[nonce1Word], d.currentWorkID)
+			minrLog.Debugf("Found candidate nonce %x, extraNonce %x, workID "+
+				"%08x, timestamp %08x",
+				outputData[i+1], d.lastBlock[nonce1Word], d.currentWorkID,
+				d.lastBlock[timestampWord])
 
 			// Assess the work. If it's below target, it'll be rejected
 			// here. The mining algorithm currently sends this loop any
 			// difficulty 1 shares.
-			d.foundCandidate(outputData[i+1], d.lastBlock[nonce1Word])
+			d.foundCandidate(d.lastBlock[timestampWord], outputData[i+1],
+				d.lastBlock[nonce1Word])
 		}
 
 		d.workDoneLast += globalWorksize
@@ -399,10 +408,11 @@ func (d *Device) runDevice() error {
 	}
 }
 
-func (d *Device) foundCandidate(nonce0, nonce1 uint32) {
-	// Construct the final block header
+func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
+	// Construct the final block header.
 	data := make([]byte, 192)
 	copy(data, d.work.Data[:])
+	binary.BigEndian.PutUint32(data[128+4*timestampWord:], ts)
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
 	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	hash := chainhash.HashFuncH(data[0:180])
