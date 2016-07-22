@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/decred/gominer/cl"
@@ -48,6 +49,7 @@ type Miner struct {
 	pool             *Stratum
 
 	validShares   uint64
+	staleShares   uint64
 	invalidShares uint64
 }
 
@@ -101,30 +103,56 @@ func (m *Miner) workSubmitThread() {
 			if m.pool == nil {
 				accepted, err := GetWorkSubmit(data)
 				if err != nil {
-					m.invalidShares++
+					inval := atomic.LoadUint64(&m.invalidShares)
+					inval++
+					atomic.StoreUint64(&m.invalidShares, inval)
+
 					minrLog.Errorf("Error submitting work: %v", err)
 				} else {
 					if accepted {
-						m.validShares++
+						val := atomic.LoadUint64(&m.validShares)
+						val++
+						atomic.StoreUint64(&m.validShares, val)
+
+						minrLog.Debugf("Submitted work successfully: %v",
+							accepted)
 					} else {
-						m.invalidShares++
+						inval := atomic.LoadUint64(&m.invalidShares)
+						inval++
+						atomic.StoreUint64(&m.invalidShares, inval)
 					}
-					minrLog.Debugf("Submitted work successfully: %v", accepted)
+
 					m.needsWorkRefresh <- struct{}{}
 				}
 			} else {
 				accepted, err := GetPoolWorkSubmit(data, m.pool)
 				if err != nil {
-					m.invalidShares++
-					minrLog.Errorf("Error submitting work to pool: %v", err)
+					if err == ErrStatumStaleWork {
+						stale := atomic.LoadUint64(&m.staleShares)
+						stale++
+						atomic.StoreUint64(&m.staleShares, stale)
+					} else {
+						inval := atomic.LoadUint64(&m.invalidShares)
+						inval++
+						atomic.StoreUint64(&m.invalidShares, inval)
+
+						minrLog.Errorf("Error submitting work to pool: %v", err)
+					}
 				} else {
 					if accepted {
-						m.validShares++
+						val := atomic.LoadUint64(&m.validShares)
+						val++
+						atomic.StoreUint64(&m.validShares, val)
+
+						minrLog.Debugf("Submitted work to pool successfully: %v",
+							accepted)
 					} else {
+						inval := atomic.LoadUint64(&m.invalidShares)
+						inval++
+						atomic.StoreUint64(&m.invalidShares, inval)
+
 						m.invalidShares++
 					}
-					minrLog.Debugf("Submitted work to pool successfully: %v",
-						accepted)
 					m.needsWorkRefresh <- struct{}{}
 				}
 			}
@@ -175,8 +203,10 @@ func (m *Miner) printStatsThread() {
 	defer t.Stop()
 
 	for {
-		minrLog.Infof("Total accepted shares: %v, total rejected shares: %v",
-			m.validShares, m.invalidShares)
+		minrLog.Infof("Accepted: %v, rejected: %v, stale %v",
+			atomic.LoadUint64(&m.validShares),
+			atomic.LoadUint64(&m.invalidShares),
+			atomic.LoadUint64(&m.staleShares))
 		for _, d := range m.devices {
 			d.PrintStats()
 		}

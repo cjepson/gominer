@@ -7,7 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
-	// 	"time"
+	"time"
 	"unsafe"
 
 	"github.com/decred/dcrd/blockchain"
@@ -55,11 +55,24 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	return program_buffer[:], program_size[:], nil
 }
 
+// NewWork is the constructor for work.
+func NewWork(data [192]byte, target *big.Int, jobTime uint32, timeReceived uint32,
+	isSolo bool) *Work {
+	return &Work{
+		Data:         data,
+		Target:       target,
+		JobTime:      jobTime,
+		TimeReceived: timeReceived,
+		isSolo:       isSolo,
+	}
+}
+
 type Work struct {
 	Data         [192]byte
 	Target       *big.Int
 	JobTime      uint32
 	TimeReceived uint32
+	isSolo       bool
 }
 
 type Device struct {
@@ -334,11 +347,14 @@ func (d *Device) runDevice() error {
 		rolloverExtraNonce(&d.extraNonce)
 		d.lastBlock[nonce1Word] = Uint32EndiannessSwap(d.extraNonce)
 
-		// Update the timestamp. This is pretty fucked up
-		// in the "stratum" protocol.
-		// diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
-		// ts := d.work.JobTime + diffSeconds
-		// d.lastBlock[timestampWord] = Uint32EndiannessSwap(ts)
+		// Update the timestamp. Only solo work allows you to roll
+		// the timestamp.
+		ts := d.work.JobTime
+		if d.work.isSolo {
+			diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
+			ts = d.work.JobTime + diffSeconds
+		}
+		d.lastBlock[timestampWord] = Uint32EndiannessSwap(ts)
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer

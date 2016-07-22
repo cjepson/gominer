@@ -14,10 +14,10 @@ import (
 	"io"
 	"math/big"
 	"net"
-	// "sync/atomic"
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -28,6 +28,9 @@ import (
 )
 
 var chainParams = &chaincfg.MainNetParams
+
+// ErrStatumStaleWork indicates that the work to send to the pool was stale.
+var ErrStatumStaleWork = fmt.Errorf("Stale work, throwing away")
 
 // Stratum holds all the shared information for a stratum connection.
 // XXX most of these should be unexported and use getters/setters.
@@ -781,7 +784,8 @@ func (s *Stratum) PrepWork() error {
 	t := time.Now().Unix() + s.PoolWork.NtimeDelta
 	bh.Timestamp = time.Unix(t, 0)
 	bh.Nonce = 0
-	// Serialized version
+
+	// Serialized version.
 	blockHeader, err := bh.Bytes()
 	if err != nil {
 		return err
@@ -822,20 +826,19 @@ func (s *Stratum) PrepWork() error {
 	}
 	workPosition += 4
 
-	var w Work
-	copy(w.Data[:], workdata[:])
-	w.Target = s.Target
+	var workData [192]byte
+	copy(workData[:], workdata[:])
 	givenTs := binary.LittleEndian.Uint32(
-		w.Data[128+4*timestampWord : 132+4*timestampWord])
-	w.JobTime = givenTs
-	s.latestJobTime = givenTs
-	w.TimeReceived = uint32(time.Now().Unix())
+		workData[128+4*timestampWord : 132+4*timestampWord])
+	atomic.StoreUint32(&s.latestJobTime, givenTs)
+
+	w := NewWork(workData, s.Target, givenTs, uint32(time.Now().Unix()), false)
 
 	poolLog.Tracef("Stratum prepated work data %v, target %032x",
 		hex.EncodeToString(w.Data[:]), w.Target.Bytes())
-	s.PoolWork.Work = &w
-	return nil
+	s.PoolWork.Work = w
 
+	return nil
 }
 
 // PrepSubmit formats a mining.sumbit message from the solved work.
@@ -853,7 +856,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	hexData := hex.EncodeToString(data)
 	decodedData, err := hex.DecodeString(hexData)
 	if err != nil {
-		poolLog.Error("Error decoding data.")
+		poolLog.Error("Error decoding data")
 		return sub, err
 	}
 
@@ -861,7 +864,7 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	bhBuf := bytes.NewReader(decodedData[0:wire.MaxBlockHeaderPayload])
 	err = submittedHeader.Deserialize(bhBuf)
 	if err != nil {
-		poolLog.Error("Error generating header.")
+		poolLog.Error("Error generating header")
 		return sub, err
 	}
 
@@ -870,8 +873,22 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	s.submitID = s.ID
 	s.submitted = true
 
-	// timestampStr := fmt.Sprintf("%08x", uint32(submittedHeader.Timestamp.Unix()))
-	timestampStr := fmt.Sprintf("%08x", s.latestJobTime)
+	latestWorkTs := atomic.LoadUint32(&s.latestJobTime)
+	if uint32(submittedHeader.Timestamp.Unix()) != latestWorkTs {
+		return sub, ErrStatumStaleWork
+	}
+
+	// The timestamp string should be:
+	//
+	//   timestampStr := fmt.Sprintf("%08x",
+	//     uint32(submittedHeader.Timestamp.Unix()))
+	//
+	// but the "stratum" protocol appears to only use this value
+	// to check if the miner is in sync with the latest announcement
+	// of work from the pool. If this value is anything other than
+	// the timestamp of the latest pool work timestamp, work gets
+	// rejected from the current implementation.
+	timestampStr := fmt.Sprintf("%08x", latestWorkTs)
 	nonceStr := fmt.Sprintf("%08x", submittedHeader.Nonce)
 	xnonceStr := hex.EncodeToString(data[144:156])
 
