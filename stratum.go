@@ -863,11 +863,12 @@ func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
 	s.submitID = s.ID
 	s.submitted = true
 
+	timestampStr := fmt.Sprintf("%08x", submittedHeader.Timestamp)
 	nonceStr := fmt.Sprintf("%08x", submittedHeader.Nonce)
 	xnonceStr := hex.EncodeToString(data[144:156])
 
 	// pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr
-	sub.Params = []string{s.User, s.PoolWork.JobID, xnonceStr, s.PoolWork.Ntime,
+	sub.Params = []string{s.User, s.PoolWork.JobID, xnonceStr, timestampStr,
 		nonceStr}
 
 	return sub, nil
