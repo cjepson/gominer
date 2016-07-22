@@ -870,8 +870,30 @@ func (s *Stratum) PrepWork() error {
 
 }
 
+// uint32Swap swaps the endianess of a slice of uint32s, swapping only uint32s
+// at a time. The number of bytes in the pointer passed must be a multiple of
+// 4. The underlying slice is modified.
+func uint32Swap(aPtr *[]byte) {
+	a := *aPtr
+	sz := len(a)
+	itrs := sz / 4
+	fmt.Printf("a %x\n", a)
+	for i := 0; i < itrs; i++ {
+		a[(i*4)], a[(i*4)+3] = a[(i*4)+3], a[i*4]
+		a[(i*4)+1], a[(i*4)+2] = a[(i*4)+2], a[(i*4)+1]
+	}
+}
+
 // PrepSubmit formats a mining.sumbit message from the solved work.
 func (s *Stratum) PrepSubmit(data []byte) (Submit, error) {
+	poolLog.Debugf("got valid work to submit %x", data)
+	poolLog.Debugf("Stratum got valid work hash %x",
+		chainhash.HashFuncH(data[0:180]))
+	data2 := make([]byte, 180)
+	copy(data2, data[0:180])
+	swapHeaderCrazyEndian(&data2)
+	poolLog.Debugf("valid work hash %x (crazy endian)", chainhash.HashFuncB(data2[0:180]))
+
 	sub := Submit{}
 	sub.Method = "mining.submit"
 

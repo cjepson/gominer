@@ -355,26 +355,20 @@ func (d *Device) runDevice() error {
 	}
 }
 
-func (d *Device) foundCandidate(nonce1 uint32, nonce0 uint32) {
+func (d *Device) foundCandidate(nonce1, nonce0 uint32) {
 	// Construct the final block header
 	data := make([]byte, 192)
 	copy(data, d.work.Data[:])
-	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
-	hash := chainhash.HashFuncB(data[0:180])
+	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
+	hash := chainhash.HashFuncH(data[0:180])
+	minrLog.Debugf("candidate hash: %x", hash)
 
-	newHash, err := chainhash.NewHashFromStr(hex.EncodeToString(reverse(hash[:])))
-	if err != nil {
-		minrLog.Error(err)
-	}
-	minrLog.Errorf("hash: %x", hash)
-	minrLog.Errorf("newHash: %v", newHash)
-	hashNum := blockchain.ShaHashToBig(newHash)
+	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(d.work.Target) > 0 {
-		minrLog.Infof("Hash %s below target %s", hex.EncodeToString(reverse(hash[:])), d.work.Target)
-
+		minrLog.Infof("Hash %s below target %x", hash, d.work.Target.Bytes())
 	} else {
-		minrLog.Infof("Found hash!!  %s", hex.EncodeToString(hash[:]))
+		minrLog.Infof("Found hash!! %v", hash)
 		d.workDone <- data
 	}
 }
