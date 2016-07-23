@@ -155,6 +155,9 @@ __kernel void search(
 	*/
 
 	if (pre7 ^ V7 ^ VF) return;
+        
+        // Quit if we scan the whole range.
+        if (M3 == 0xFFFFFFFF) return;
 
 	/* Push this share */
 	//output[output[0xFF]++] = M3;
