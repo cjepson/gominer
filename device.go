@@ -144,13 +144,10 @@ type Device struct {
 	workDone chan []byte
 	hasWork  bool
 
-	workDoneEMA   float64
-	workDoneLast  float64
-	workDoneTotal float64
-	runningTime   float64
-
-	validShares   uint64
-	invalidShares uint64
+	started          uint32
+	allDiffOneShares uint64
+	validShares      uint64
+	invalidShares    uint64
 
 	quit chan struct{}
 }
@@ -260,6 +257,8 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateKernel")
 	}
+
+	d.started = uint32(time.Now().Unix())
 
 	return d, nil
 }
@@ -466,6 +465,7 @@ func (d *Device) runDevice() error {
 				i+1, outputData[i+1], d.lastBlock[nonce1Word],
 				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])
+			d.allDiffOneShares++
 
 			// Assess the work. If it's below target, it'll be rejected
 			// here. The mining algorithm currently sends this loop any
@@ -477,9 +477,6 @@ func (d *Device) runDevice() error {
 
 		elapsedTime := time.Since(currentTime)
 		minrLog.Tracef("Kernel execution to read time: %v", elapsedTime)
-
-		d.workDoneLast += globalWorksize
-		d.workDoneTotal += globalWorksize
 	}
 }
 
@@ -495,6 +492,12 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(d.work.Target) > 0 {
 		minrLog.Debugf("Hash %v below target %032x", hash, d.work.Target.Bytes())
+
+		// Hashes that reach this function and fail the minimal proof of
+		// work check are considered to be hardware errors.
+		if hashNum.Cmp(chainParams.PowLimit) > 0 {
+			d.invalidShares++
+		}
 	} else {
 		minrLog.Infof("Found hash with work above target! %v", hash)
 		d.validShares++
@@ -549,15 +552,20 @@ func getDeviceInfo(id cl.CL_device_id,
 }
 
 func (d *Device) PrintStats() {
-	alpha := 0.95
-	d.workDoneEMA = d.workDoneEMA*alpha + d.workDoneLast*(1-alpha)
-	d.workDoneLast = 0
-	d.runningTime += 5.0
+	secondsElapsed := uint32(time.Now().Unix()) - d.started
+	if secondsElapsed == 0 {
+		return
+	}
 
-	minrLog.Infof("GPU #%d: %s, EMA %s avg %s (valid shares from GPU: %v)",
+	diffOneShareHashesAvg := uint64(0x00000000FFFFFFFF)
+	averageHashRate := (float64(diffOneShareHashesAvg) *
+		float64(d.allDiffOneShares)) /
+		float64(secondsElapsed)
+
+	minrLog.Infof("GPU #%d: %s, average hash rate %v, %v/%v valid shares",
 		d.index,
 		d.deviceName,
-		formatHashrate(d.workDoneEMA),
-		formatHashrate(d.workDoneTotal/d.runningTime),
-		d.validShares)
+		formatHashrate(averageHashRate),
+		d.validShares,
+		d.validShares+d.invalidShares)
 }
