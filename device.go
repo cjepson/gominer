@@ -65,7 +65,7 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	averageRate := 350                 // ms/GH/s
 	base := uint64(0x000000000FFFFFFF) // scan range
 	base *= uint64(cfg.HashRate * target)
-	base /= uint64(350 * megaHashesInGigahash) // ms/MH/s
+	base /= uint64(averageRate * megaHashesInGigahash) // ms/MH/s
 
 	// Intel.
 	if cfg.Intel && cfg.Intensity < 24 {
