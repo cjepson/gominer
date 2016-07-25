@@ -465,7 +465,6 @@ func (d *Device) runDevice() error {
 				i+1, outputData[i+1], d.lastBlock[nonce1Word],
 				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])
-			d.allDiffOneShares++
 
 			// Assess the work. If it's below target, it'll be rejected
 			// here. The mining algorithm currently sends this loop any
@@ -489,17 +488,24 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
 	hash := chainhash.HashFuncH(data[0:180])
 
+	// Hashes that reach this logic and fail the minimal proof of
+	// work check are considered to be hardware errors.
 	hashNum := blockchain.ShaHashToBig(&hash)
-	if hashNum.Cmp(d.work.Target) > 0 {
-		minrLog.Debugf("Hash %v below target %032x", hash, d.work.Target.Bytes())
-
-		// Hashes that reach this function and fail the minimal proof of
-		// work check are considered to be hardware errors.
-		if hashNum.Cmp(chainParams.PowLimit) > 0 {
-			d.invalidShares++
-		}
+	if hashNum.Cmp(chainParams.PowLimit) > 0 {
+		minrLog.Errorf("Hardware error found, hash %v above minimum target "+
+			"%032x", hash, d.work.Target.Bytes())
+		d.invalidShares++
+		return
 	} else {
-		minrLog.Infof("Found hash with work above target! %v", hash)
+		d.allDiffOneShares++
+	}
+
+	// Assess versus the pool or daemon target.
+	if hashNum.Cmp(d.work.Target) > 0 {
+		minrLog.Debugf("Hash %v bigger than target %032x (boo)", hash,
+			d.work.Target.Bytes())
+	} else {
+		minrLog.Infof("Found hash with work below target! %v (yay)", hash)
 		d.validShares++
 		d.workDone <- data
 	}
