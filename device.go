@@ -59,11 +59,11 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	// a second, so that the GPU is always working on the
 	// latest work passed by a pool or daemon. Scan time is
 	// approximately 450 ms/GH/s.
-	gigahashSec := 1000
+	megaHashesInGigahash := 1000
 	target := 500                      // milliseconds
 	base := uint64(0x000000000FFFFFFF) // scan range
 	base *= uint64(cfg.HashRate * target)
-	base /= uint64(450 * gigahashSec) // milliseconds/GH/s
+	base /= uint64(450 * megaHashesInGigahash) // milliseconds/MH/s
 	if base >= 0xFFFFFFFF {
 		base = 0xFFFFFFFF
 	}
