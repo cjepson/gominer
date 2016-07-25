@@ -409,8 +409,6 @@ func (d *Device) runDevice() error {
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLEnqueueNDRangeKernel")
 		}
-		elapsedTime := time.Since(currentTime)
-		minrLog.Tracef("Kernel execution time: %v", elapsedTime)
 
 		// Read the output buffer.
 		cl.CLEnqueueReadBuffer(d.queue, d.outputBuffer, cl.CL_TRUE, 0,
@@ -434,6 +432,9 @@ func (d *Device) runDevice() error {
 			d.foundCandidate(d.lastBlock[timestampWord], outputData[i+1],
 				d.lastBlock[nonce1Word])
 		}
+
+		elapsedTime := time.Since(currentTime)
+		minrLog.Tracef("Kernel execution to read time: %v", elapsedTime)
 
 		d.workDoneLast += globalWorksize
 		d.workDoneTotal += globalWorksize

@@ -158,8 +158,8 @@ __kernel void search(
 	if (pre7 ^ V7 ^ VF) return;
 
 	// Quit if we scan enough.
-	if (M3 == 0x0FFFFFFF) {
-		output[++output[0]] = 0xFFFFFFFF;
+	if (M3 == 0xFFFFFFFF) {
+		// output[++output[0]] = 0xFFFFFFFF;
  		return;
 	}
         
