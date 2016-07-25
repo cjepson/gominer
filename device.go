@@ -58,15 +58,24 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	// a value to abort the search after approximately half
 	// a second, so that the GPU is always working on the
 	// latest work passed by a pool or daemon. Scan time is
-	// approximately 450 ms/GH/s.
+	// approximately 450 ms/GH/s from 0 to 0x0FFFFFFF at
+	// intensity 31 for an AMD or nVidia GPU.
 	megaHashesInGigahash := 1000
 	target := 500                      // milliseconds
 	base := uint64(0x000000000FFFFFFF) // scan range
 	base *= uint64(cfg.HashRate * target)
 	base /= uint64(450 * megaHashesInGigahash) // milliseconds/MH/s
-	if base >= 0xFFFFFFFF {
-		base = 0xFFFFFFFF
-	}
+
+	/*
+		if cfg.Intensity < 24 {
+			base = 0xFFFFFFFF
+		} else {
+			base >>= (uint64(cfg.Intensity) - 24)
+			if base >= 0xFFFFFFFF {
+				base = 0xFFFFFFFF
+			}
+		}
+	*/
 	baseAsUint32 := uint32(base)
 	baseAsUint32Str := fmt.Sprintf("0x%08xUL", baseAsUint32)
 	minrLog.Infof("Setting the kernel scan range to %s", baseAsUint32Str)
@@ -245,6 +254,9 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 	if status != cl.CL_SUCCESS {
 		return nil, clError(status, "CLCreateKernel")
 	}
+
+	minrLog.Debugf("Created kernel for device index %v, ID %v, platform %v",
+		d.index, d.deviceID, d.platformID)
 
 	return d, nil
 }
