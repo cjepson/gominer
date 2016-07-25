@@ -68,7 +68,7 @@ type config struct {
 	TLSSkipVerify bool `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
 
 	Intensity int `short:"i" long:"intensity" description:"Intensity."`
-	HashRate  int `short:"h" long:"hashrate" description:"The estimated GPU hash rate in MH/s (for kernel search optimization)"`
+	HashRate  int `short:"H" long:"hashrate" description:"The estimated GPU hash rate in MH/s (for kernel search optimization)"`
 
 	// Pool related options
 	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port) "`
