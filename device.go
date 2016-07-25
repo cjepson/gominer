@@ -57,20 +57,20 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	// configuration. The algorithm below attempts to find
 	// a value to abort the search after approximately half
 	// a second, so that the GPU is always working on the
-	// latest work passed by a pool or daemon. Scan time is
-	// approximately 375 ms/GH/s from 0 to 0x0FFFFFFF at
-	// intensity 31 for an AMD or nVidia GPU.
+	// latest work passed by a pool or daemon. Kernel
+	// execution time is approximately 1 ms/GH/s from 0 to
+	// 0x0FFFFFFF at intensity 31 for an AMD or nVidia GPU.
 	megaHashesInGigahash := 1000
 	target := 500                      // milliseconds
-	averageRate := 350                 // ms/GH/s
 	base := uint64(0x000000000FFFFFFF) // scan range
 	base *= uint64(cfg.HashRate * target)
-	base /= uint64(averageRate * megaHashesInGigahash) // ms/MH/s
+	base /= uint64(megaHashesInGigahash) // ms/MH/s
 
 	// Intel.
 	if cfg.Intel && cfg.Intensity < 24 {
 		base = 0xFFFFFFFF
 	} else {
+		base /= 300
 		base >>= (uint64(cfg.Intensity) - 24)
 	}
 
@@ -365,7 +365,7 @@ func (d *Device) runDevice() error {
 	minrLog.Infof("Started GPU #%d: %s", d.index, d.deviceName)
 	outputData := make([]uint32, outputBufferSize)
 	globalWorksize := math.Exp2(float64(cfg.Intensity))
-	minrLog.Debugf("Intensity %v", cfg.Intensity)
+	minrLog.Debugf("GPU #%d: Intensity %v", d.index, cfg.Intensity)
 	var status cl.CL_int
 
 	// Bump the extraNonce for the device it's running on
@@ -460,9 +460,9 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate %v nonce %08x, extraNonce %08x, "+
-				"workID %08x, timestamp %08x",
-				i+1, outputData[i+1], d.lastBlock[nonce1Word],
+			minrLog.Debugf("GPU #%d: Found candidate %v nonce %08x, "+
+				"extraNonce %08x, workID %08x, timestamp %08x",
+				d.index, i+1, outputData[i+1], d.lastBlock[nonce1Word],
 				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])
 
@@ -475,7 +475,8 @@ func (d *Device) runDevice() error {
 		}
 
 		elapsedTime := time.Since(currentTime)
-		minrLog.Tracef("Kernel execution to read time: %v", elapsedTime)
+		minrLog.Tracef("GPU #%d: Kernel execution to read time: %v", d.index,
+			elapsedTime)
 	}
 }
 
@@ -492,8 +493,8 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 	// work check are considered to be hardware errors.
 	hashNum := blockchain.ShaHashToBig(&hash)
 	if hashNum.Cmp(chainParams.PowLimit) > 0 {
-		minrLog.Errorf("Hardware error found, hash %v above minimum target "+
-			"%032x", hash, d.work.Target.Bytes())
+		minrLog.Errorf("GPU #%d: Hardware error found, hash %v above "+
+			"minimum target %032x", d.index, hash, d.work.Target.Bytes())
 		d.invalidShares++
 		return
 	} else {
@@ -502,10 +503,11 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 
 	// Assess versus the pool or daemon target.
 	if hashNum.Cmp(d.work.Target) > 0 {
-		minrLog.Debugf("Hash %v bigger than target %032x (boo)", hash,
-			d.work.Target.Bytes())
+		minrLog.Debugf("GPU #%d: Hash %v bigger than target %032x (boo)",
+			d.index, hash, d.work.Target.Bytes())
 	} else {
-		minrLog.Infof("Found hash with work below target! %v (yay)", hash)
+		minrLog.Infof("GPU #%d: Found hash with work below target! %v (yay)",
+			d.index, hash)
 		d.validShares++
 		d.workDone <- data
 	}
@@ -568,7 +570,7 @@ func (d *Device) PrintStats() {
 		float64(d.allDiffOneShares)) /
 		float64(secondsElapsed)
 
-	minrLog.Infof("GPU #%d:%s reporting average hash rate %v, %v/%v valid work",
+	minrLog.Infof("GPU #%d (%s) reporting average hash rate %v, %v/%v valid work",
 		d.index,
 		d.deviceName,
 		formatHashrate(averageHashRate),
