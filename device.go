@@ -74,6 +74,9 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 
 	program_size[0] = cl.CL_size_t(len(program_final))
 	program_buffer[0] = make([]byte, program_size[0])
+	for i := range program_final {
+		program_buffer[0][i] = program_final[i]
+	}
 
 	return program_buffer[:], program_size[:], nil
 }
