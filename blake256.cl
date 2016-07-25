@@ -159,7 +159,6 @@ __kernel void search(
 
 	// Quit if we scan enough.
 	if (M3 == 0xFFFFFFFF) {
-		// output[++output[0]] = 0xFFFFFFFF;
  		return;
 	}
         

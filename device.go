@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	outputBufferSize = cl.CL_size_t(64)
-	localWorksize    = 64
+	outputBufferSize = cl.CL_size_t(8) // 64
+	localWorksize    = 8               // 64
 	uint32Size       = cl.CL_size_t(unsafe.Sizeof(cl.CL_uint(0)))
 
 	timestampWord = 2
