@@ -69,6 +69,7 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	}
 	baseAsUint32 := uint32(base)
 	baseAsUint32Str := fmt.Sprintf("0x%08xUL", baseAsUint32)
+	minrLog.Infof("Setting the kernel scan range to %s", baseAsUint32Str)
 	str = strings.Replace(str, worksearchSentinelValue, baseAsUint32Str, -1)
 	program_final := []byte(str)
 
