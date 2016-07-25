@@ -59,9 +59,7 @@ __kernel void search(
 	const uint M3 = get_global_id(0);
         
 	// Quit if we scan enough.
-	if (M3 >= 0x0FFFFFFF) {
- 		return;
-	}
+	if (M3 >= SENTINEL_VALUE_EARLY_RETURN) return;
         
 	const uint MD = 0x80000001UL;
 	const uint ME = 0x00000000UL;

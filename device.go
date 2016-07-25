@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -26,6 +29,8 @@ const (
 	nonce0Word    = 3
 	nonce1Word    = 4
 	nonce2Word    = 5
+
+	worksearchSentinelValue = "SENTINEL_VALUE_EARLY_RETURN"
 )
 
 var zeroSlice = []cl.CL_uint{cl.CL_uint(0)}
@@ -34,23 +39,41 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 	var program_buffer [1][]byte
 	var program_size [1]cl.CL_size_t
 
-	/* Read each program file and place content into buffer array */
+	// Read each program file and place content into buffer array.
 	program_handle, err := os.Open(filename)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer program_handle.Close()
 
-	fi, err := program_handle.Stat()
+	buf := bytes.NewBuffer(nil)
+	_, err = io.Copy(buf, program_handle)
 	if err != nil {
 		return nil, nil, err
 	}
-	program_size[0] = cl.CL_size_t(fi.Size())
-	program_buffer[0] = make([]byte, program_size[0])
-	read_size, err := program_handle.Read(program_buffer[0])
-	if err != nil || cl.CL_size_t(read_size) != program_size[0] {
-		return nil, nil, err
+	str := string(buf.Bytes())
+
+	// Optimize the search based on the value passed in the
+	// configuration. The algorithm below attempts to find
+	// a value to abort the search after approximately half
+	// a second, so that the GPU is always working on the
+	// latest work passed by a pool or daemon. Scan time is
+	// approximately 450 ms/GH/s.
+	gigahashSec := 1000
+	target := 500                      // milliseconds
+	base := uint64(0x000000000FFFFFFF) // scan range
+	base *= uint64(cfg.HashRate * target)
+	base /= uint64(450 * gigahashSec) // milliseconds/GH/s
+	if base >= 0xFFFFFFFF {
+		base = 0xFFFFFFFF
 	}
+	baseAsUint32 := uint32(base)
+	baseAsUint32Str := fmt.Sprintf("0x%08xUL", baseAsUint32)
+	str = strings.Replace(str, worksearchSentinelValue, baseAsUint32Str, -1)
+	program_final := []byte(str)
+
+	program_size[0] = cl.CL_size_t(len(program_final))
+	program_buffer[0] = make([]byte, program_size[0])
 
 	return program_buffer[:], program_size[:], nil
 }
@@ -419,8 +442,8 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate %v nonce %x, extraNonce %x, workID "+
-				"%08x, timestamp %08x",
+			minrLog.Debugf("Found candidate %v nonce %08x, extraNonce %08x, "+
+				"workID %08x, timestamp %08x",
 				i+1, outputData[i+1], d.lastBlock[nonce1Word],
 				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])

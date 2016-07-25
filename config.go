@@ -31,6 +31,7 @@ var (
 	defaultRPCCertFile = filepath.Join(dcrdHomeDir, "rpc.cert")
 	defaultLogDir      = filepath.Join(minerHomeDir, defaultLogDirname)
 	defaultIntensity   = 26
+	defaultGPUHashRate = 1000
 	// Took these values from cgminer.
 	minIntensity = 8
 	maxIntensity = 31
@@ -67,6 +68,7 @@ type config struct {
 	TLSSkipVerify bool `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
 
 	Intensity int `short:"i" long:"intensity" description:"Intensity."`
+	HashRate  int `short:"h" long:"hashrate" description:"The estimated GPU hash rate (for kernel search optimization)"`
 
 	// Pool related options
 	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port) "`
@@ -224,6 +226,7 @@ func loadConfig() (*config, []string, error) {
 		RPCCert:    defaultRPCCertFile,
 		Intensity:  defaultIntensity,
 		ClKernel:   defaultClKernel,
+		HashRate:   defaultGPUHashRate,
 	}
 
 	// Create the home directory if it doesn't already exist.
@@ -296,6 +299,14 @@ func loadConfig() (*config, []string, error) {
 	if (cfg.Intensity < minIntensity) || (cfg.Intensity > maxIntensity) {
 		err := fmt.Errorf("Intensity %v not without range %v to %v.",
 			cfg.Intensity, minIntensity, maxIntensity)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	// Check the hashrate for optimizing the kernel.
+	if cfg.HashRate < 1 {
+		err := fmt.Errorf("Zero or negative hash rate passed: %v",
+			cfg.HashRate)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
