@@ -568,7 +568,7 @@ func (d *Device) PrintStats() {
 		float64(d.allDiffOneShares)) /
 		float64(secondsElapsed)
 
-	minrLog.Infof("GPU #%d:%s reporting average hash rate %v, %v/%v valid shares",
+	minrLog.Infof("GPU #%d:%s reporting average hash rate %v, %v/%v valid work",
 		d.index,
 		d.deviceName,
 		formatHashrate(averageHashRate),
