@@ -54,15 +54,16 @@ __kernel void search(
 	const uint MB,
 	const uint MC
 )
-{
+{	
+	// Load the block header and padding.
+	const uint M3 = get_global_id(0);
+        
 	// Quit if we scan enough.
 	if (M3 >= 0x0FFFFFFF) {
 		output[++output[0]] = M3;
  		return;
 	}
-	
-	// Load the block header and padding.
-	const uint M3 = get_global_id(0);
+        
 	const uint MD = 0x80000001UL;
 	const uint ME = 0x00000000UL;
 	const uint MF = 0x000005a0UL;
