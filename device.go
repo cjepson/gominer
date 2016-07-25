@@ -398,7 +398,8 @@ func (d *Device) runDevice() error {
 			return clError(status, "CLEnqueueWriteBuffer")
 		}
 
-		// Execute the kernel
+		// Execute the kernel and follow its execution time.
+		currentTime := time.Now()
 		var globalWorkSize [1]cl.CL_size_t
 		globalWorkSize[0] = cl.CL_size_t(globalWorksize)
 		var localWorkSize [1]cl.CL_size_t
@@ -408,8 +409,10 @@ func (d *Device) runDevice() error {
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLEnqueueNDRangeKernel")
 		}
+		elapsedTime := time.Since(currentTime)
+		minrLog.Tracef("Kernel execution time: %v", elapsedTime)
 
-		// Read the output buffer
+		// Read the output buffer.
 		cl.CLEnqueueReadBuffer(d.queue, d.outputBuffer, cl.CL_TRUE, 0,
 			uint32Size*outputBufferSize, unsafe.Pointer(&outputData[0]), 0,
 			nil, nil)
@@ -418,15 +421,16 @@ func (d *Device) runDevice() error {
 		}
 
 		for i := uint32(0); i < outputData[0]; i++ {
-			minrLog.Debugf("Found candidate nonce %x, extraNonce %x, workID "+
+			minrLog.Debugf("Found candidate %v nonce %x, extraNonce %x, workID "+
 				"%08x, timestamp %08x",
-				outputData[i+1], d.lastBlock[nonce1Word],
+				i+1, outputData[i+1], d.lastBlock[nonce1Word],
 				Uint32EndiannessSwap(d.currentWorkID),
 				d.lastBlock[timestampWord])
 
 			// Assess the work. If it's below target, it'll be rejected
 			// here. The mining algorithm currently sends this loop any
-			// difficulty 1 shares.
+			// difficulty 1 shares. If the kernel search was exhaused,
+			// the sentinel value 0xFFFFFFFF is returned instead.
 			d.foundCandidate(d.lastBlock[timestampWord], outputData[i+1],
 				d.lastBlock[nonce1Word])
 		}
