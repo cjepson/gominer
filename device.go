@@ -9,7 +9,6 @@ import (
 	"math"
 	"math/big"
 	"os"
-	"strings"
 	"time"
 	"unsafe"
 
@@ -52,40 +51,6 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 		return nil, nil, err
 	}
 	str := string(buf.Bytes())
-
-	// Optimize the search based on the value passed in the
-	// configuration. The algorithm below attempts to find
-	// a value to abort the search after approximately half
-	// a second, so that the GPU is always working on the
-	// latest work passed by a pool or daemon. Kernel
-	// execution time is approximately 1 ms/GH/s from 0 to
-	// 0x0FFFFFFF at intensity 31 for an AMD or nVidia GPU.
-	megaHashesInGigahash := 1000
-	target := 500                      // milliseconds
-	base := uint64(0x000000000FFFFFFF) // scan range
-	base *= uint64(cfg.HashRate * target)
-	base /= uint64(megaHashesInGigahash) // ms/MH/s
-
-	// Intel.
-	if cfg.Intel && cfg.Intensity < 24 {
-		base = 0xFFFFFFFF
-	} else {
-		base /= 300
-		base >>= (uint64(cfg.Intensity) - 24)
-	}
-
-	// AMD or nVidia. Just use the maximum scan range if
-	// below intensity 28.
-	if !cfg.Intel && cfg.Intensity < 28 {
-		base = 0xFFFFFFFF
-	}
-	if base > 0xFFFFFFFF {
-		base = 0xFFFFFFFF
-	}
-	baseAsUint32 := uint32(base)
-	baseAsUint32Str := fmt.Sprintf("0x%08xUL", baseAsUint32)
-	minrLog.Infof("Setting the kernel scan range to %s", baseAsUint32Str)
-	str = strings.Replace(str, worksearchSentinelValue, baseAsUint32Str, -1)
 	program_final := []byte(str)
 
 	program_size[0] = cl.CL_size_t(len(program_final))
@@ -364,9 +329,17 @@ func (d *Device) testFoundCandidate() {
 func (d *Device) runDevice() error {
 	minrLog.Infof("Started GPU #%d: %s", d.index, d.deviceName)
 	outputData := make([]uint32, outputBufferSize)
-	globalWorksize := math.Exp2(float64(cfg.Intensity))
-	minrLog.Debugf("GPU #%d: Intensity %v", d.index, cfg.Intensity)
-	var status cl.CL_int
+	var globalWorksize uint32
+	if cfg.WorkSize <= 0 {
+		globalWorksize = 1 << uint32(cfg.Intensity)
+		minrLog.Debugf("GPU #%d: Intensity %v (work size: %v)", d.index,
+			cfg.Intensity, globalWorksize)
+	} else {
+		globalWorksize = uint32(cfg.WorkSize)
+		intensity := math.Log2(float64(cfg.WorkSize))
+		minrLog.Debugf("GPU #%d: Work size: %v ('intensity' %v)", d.index,
+			cfg.WorkSize, intensity)
+	}
 
 	// Bump the extraNonce for the device it's running on
 	// when you begin mining. This ensures each GPU is doing
@@ -375,6 +348,7 @@ func (d *Device) runDevice() error {
 	d.extraNonce += uint32(d.index) << 24
 	d.lastBlock[nonce1Word] = Uint32EndiannessSwap(d.extraNonce)
 
+	var status cl.CL_int
 	for {
 		d.updateCurrentWork()
 
@@ -467,9 +441,8 @@ func (d *Device) runDevice() error {
 				d.lastBlock[timestampWord])
 
 			// Assess the work. If it's below target, it'll be rejected
-			// here. The mining algorithm currently sends this loop any
-			// difficulty 1 shares. If the kernel search was exhaused,
-			// the sentinel value 0xFFFFFFFF is returned instead.
+			// here. The mining algorithm currently sends this function any
+			// difficulty 1 shares.
 			d.foundCandidate(d.lastBlock[timestampWord], outputData[i+1],
 				d.lastBlock[nonce1Word])
 		}

@@ -31,13 +31,13 @@ var (
 	defaultRPCCertFile = filepath.Join(dcrdHomeDir, "rpc.cert")
 	defaultLogDir      = filepath.Join(minerHomeDir, defaultLogDirname)
 	defaultIntensity   = 26
-	defaultGPUHashRate = 1000
+	defaultWorkSize    = 0
 	defaultIntel       = false
 
 	// Took these values from cgminer.
-	minIntensity      = 8
-	maxIntensity      = 31
-	maxIntelIntensity = 26
+	minIntensity = 8
+	maxIntensity = 31
+	maxWorkSize  = 0xFFFFFFFF
 )
 
 type config struct {
@@ -70,12 +70,11 @@ type config struct {
 	SimNet        bool `long:"simnet" description:"Connect to the simulation test network"`
 	TLSSkipVerify bool `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
 
-	Intensity int  `short:"i" long:"intensity" description:"Intensity."`
-	HashRate  int  `short:"H" long:"hashrate" description:"The estimated GPU hash rate in MH/s (for kernel search optimization)"`
-	Intel     bool `long:"intel" description:"Enable this flag when using an Intel GPU device"`
+	Intensity int `short:"i" long:"intensity" description:"Intensity (the work size is 2^intensity)"`
+	WorkSize  int `short:"W" long:"worksize" description:"The explicitly declared size of the work to do, instead of using intensity (overrides intensity)"`
 
 	// Pool related options
-	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port) "`
+	Pool         string `short:"o" long:"pool" description:"Pool to connect to (e.g.stratum+tcp://pool:port)"`
 	PoolUser     string `short:"m" long:"pooluser" description:"Pool username"`
 	PoolPassword string `short:"n" long:"poolpass" default-mask:"-" description:"Pool password"`
 }
@@ -230,8 +229,7 @@ func loadConfig() (*config, []string, error) {
 		RPCCert:    defaultRPCCertFile,
 		Intensity:  defaultIntensity,
 		ClKernel:   defaultClKernel,
-		HashRate:   defaultGPUHashRate,
-		Intel:      defaultIntel,
+		WorkSize:   defaultWorkSize,
 	}
 
 	// Create the home directory if it doesn't already exist.
@@ -307,17 +305,17 @@ func loadConfig() (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
-	if cfg.Intel && (cfg.Intensity > maxIntelIntensity) {
-		err := fmt.Errorf("Intensity %v not without range %v to %v.",
-			cfg.Intensity, minIntensity, maxIntelIntensity)
+
+	// Check the work size.
+	if cfg.WorkSize < 0 {
+		err := fmt.Errorf("Zero or negative WorkSize passed: %v",
+			cfg.WorkSize)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
-
-	// Check the hashrate for optimizing the kernel.
-	if cfg.HashRate < 1 {
-		err := fmt.Errorf("Zero or negative hash rate passed: %v",
-			cfg.HashRate)
+	if cfg.WorkSize > maxWorkSize {
+		err := fmt.Errorf("Too big WorkSize passed: %v, max %v",
+			cfg.WorkSize, maxWorkSize)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
