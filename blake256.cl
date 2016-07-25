@@ -57,10 +57,6 @@ __kernel void search(
 {	
 	// Load the block header and padding.
 	const uint M3 = get_global_id(0);
-        
-	// Quit if we scan enough.
-	if (M3 >= SENTINEL_VALUE_EARLY_RETURN) return;
-        
 	const uint MD = 0x80000001UL;
 	const uint ME = 0x00000000UL;
 	const uint MF = 0x000005a0UL;
