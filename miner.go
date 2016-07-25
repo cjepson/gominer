@@ -48,6 +48,7 @@ type Miner struct {
 	wg               sync.WaitGroup
 	pool             *Stratum
 
+	started       uint32
 	validShares   uint64
 	staleShares   uint64
 	invalidShares uint64
@@ -87,6 +88,8 @@ func NewMiner() (*Miner, error) {
 			return nil, err
 		}
 	}
+
+	m.started = uint32(time.Now().Unix())
 
 	return m, nil
 }
@@ -205,10 +208,17 @@ func (m *Miner) printStatsThread() {
 	defer t.Stop()
 
 	for {
+		valid := atomic.LoadUint64(&m.validShares)
 		minrLog.Infof("Accepted: %v, rejected: %v, stale %v",
-			atomic.LoadUint64(&m.validShares),
+			valid,
 			atomic.LoadUint64(&m.invalidShares),
 			atomic.LoadUint64(&m.staleShares))
+
+		secondsElapsed := uint32(time.Now().Unix()) - m.started
+		if (secondsElapsed / 60) > 0 {
+			utility := float64(valid) / (float64(secondsElapsed) / float64(60))
+			minrLog.Infof("Utility (accepted shares/min): %v", utility)
+		}
 		for _, d := range m.devices {
 			d.PrintStats()
 		}
