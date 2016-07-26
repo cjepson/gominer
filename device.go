@@ -246,7 +246,7 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 
 		minrLog.Debugf("Autocalibration successful, work size for %v"+
 			"ms per kernel execution on device %v determined to be %v",
-			cfg.Autocalibrate, d.index, workSize)
+			cfg.Autocalibrate, d.index, idealWorkSize)
 
 		globalWorkSize = idealWorkSize
 	} else {
