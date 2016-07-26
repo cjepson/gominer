@@ -72,7 +72,7 @@ type config struct {
 	SimNet        bool `long:"simnet" description:"Connect to the simulation test network"`
 	TLSSkipVerify bool `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
 
-	Autocalibrate int      `short:"i" long:"intensity" description:"Use GPU autocalibration to achieve a kernel execution timing of the passed number of milliseconds (default: 500 ms)"`
+	Autocalibrate int      `short:"A" long:"autocalibrate" description:"Use GPU autocalibration to achieve a kernel execution timing of the passed number of milliseconds (default: 500 ms)"`
 	Intensity     []string `short:"i" long:"intensity" description:"Intensities (the work size is 2^intensity) per device, use multiple flags for multiple devices"`
 	IntensityInts []int
 	WorkSize      []string `short:"W" long:"worksize" description:"The explicitly declared sizes of the work to do per device (overrides intensity), use multiple flags for multiple devices"`
