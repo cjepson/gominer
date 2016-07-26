@@ -14,8 +14,7 @@ import (
 // getKernelExecutionTime returns the kernel execution time for a device.
 func (d *Device) getKernelExecutionTime(globalWorksize uint32) (time.Duration,
 	error) {
-	work := &Work{}
-	d.SetWork(work)
+	d.work = Work{}
 
 	minrLog.Tracef("Started GPU #%d: %s for kernel execution time fetch",
 		d.index, d.deviceName)
