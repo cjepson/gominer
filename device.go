@@ -63,13 +63,13 @@ func loadProgramSource(filename string) ([][]byte, []cl.CL_size_t, error) {
 
 // NewWork is the constructor for work.
 func NewWork(data [192]byte, target *big.Int, jobTime uint32, timeReceived uint32,
-	isSolo bool) *Work {
+	isGetWork bool) *Work {
 	return &Work{
 		Data:         data,
 		Target:       target,
 		JobTime:      jobTime,
 		TimeReceived: timeReceived,
-		isSolo:       isSolo,
+		isGetWork:    isGetWork,
 	}
 }
 
@@ -79,7 +79,7 @@ type Work struct {
 	TargetB      [32]byte
 	JobTime      uint32
 	TimeReceived uint32
-	isSolo       bool
+	isGetWork    bool
 }
 
 type Device struct {
@@ -131,19 +131,6 @@ func rolloverExtraNonce(v *uint32) {
 	} else {
 		*v++
 	}
-}
-
-// Compares a and b as big endian
-func hashSmaller(a, b []byte) bool {
-	for i := len(a) - 1; i >= 0; i-- {
-		if a[i] < b[i] {
-			return true
-		}
-		if a[i] > b[i] {
-			return false
-		}
-	}
-	return false
 }
 
 func clError(status cl.CL_int, f string) error {
@@ -378,7 +365,7 @@ func (d *Device) runDevice() error {
 		// Update the timestamp. Only solo work allows you to roll
 		// the timestamp.
 		ts := d.work.JobTime
-		if d.work.isSolo {
+		if d.work.isGetWork {
 			diffSeconds := uint32(time.Now().Unix()) - d.work.TimeReceived
 			ts = d.work.JobTime + diffSeconds
 		}
@@ -471,55 +458,32 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 	data := make([]byte, 192)
 	copy(data, d.work.Data[:])
 
-	// XXX Really we should be able to use the same test in both cases
-	// but for now in case there are some idiosyncrasies in the original
-	// keep it for solo (testnet) mining.
-	if cfg.Pool == "" {
-		binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
-		binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
-		// Perform the final hash block to get the hash
-		var state [8]uint32
-		copy(state[:], d.midstate[:])
-		blake256.Block(state[:], data[128:192], 1440)
+	binary.BigEndian.PutUint32(data[128+4*timestampWord:], ts)
+	binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
+	binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
+	hash := chainhash.HashFuncH(data[0:180])
 
-		var hash [32]byte
-		for i := 0; i < 8; i++ {
-			binary.BigEndian.PutUint32(hash[i*4:], state[i])
-		}
-
-		if hashSmaller(hash[:], d.work.TargetB[:]) {
-			minrLog.Infof("Found hash!!  %s", hex.EncodeToString(hash[:]))
-			d.workDone <- data
-		}
-
+	// Hashes that reach this logic and fail the minimal proof of
+	// work check are considered to be hardware errors.
+	hashNum := blockchain.ShaHashToBig(&hash)
+	if hashNum.Cmp(chainParams.PowLimit) > 0 {
+		minrLog.Errorf("GPU #%d: Hardware error found, hash %v above "+
+			"minimum target %032x", d.index, hash, d.work.Target.Bytes())
+		d.invalidShares++
+		return
 	} else {
-		binary.BigEndian.PutUint32(data[128+4*timestampWord:], ts)
-		binary.BigEndian.PutUint32(data[128+4*nonce0Word:], nonce0)
-		binary.BigEndian.PutUint32(data[128+4*nonce1Word:], nonce1)
-		hash := chainhash.HashFuncH(data[0:180])
+		d.allDiffOneShares++
+	}
 
-		// Hashes that reach this logic and fail the minimal proof of
-		// work check are considered to be hardware errors.
-		hashNum := blockchain.ShaHashToBig(&hash)
-		if hashNum.Cmp(chainParams.PowLimit) > 0 {
-			minrLog.Errorf("GPU #%d: Hardware error found, hash %v above "+
-				"minimum target %032x", d.index, hash, d.work.Target.Bytes())
-			d.invalidShares++
-			return
-		} else {
-			d.allDiffOneShares++
-		}
-
-		// Assess versus the pool or daemon target.
-		if hashNum.Cmp(d.work.Target) > 0 {
-			minrLog.Debugf("GPU #%d: Hash %v bigger than target %032x (boo)",
-				d.index, hash, d.work.Target.Bytes())
-		} else {
-			minrLog.Infof("GPU #%d: Found hash with work below target! %v (yay)",
-				d.index, hash)
-			d.validShares++
-			d.workDone <- data
-		}
+	// Assess versus the pool or daemon target.
+	if hashNum.Cmp(d.work.Target) > 0 {
+		minrLog.Debugf("GPU #%d: Hash %v bigger than target %032x (boo)",
+			d.index, hash, d.work.Target.Bytes())
+	} else {
+		minrLog.Infof("GPU #%d: Found hash with work below target! %v (yay)",
+			d.index, hash)
+		d.validShares++
+		d.workDone <- data
 	}
 }
 
