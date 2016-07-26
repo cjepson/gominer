@@ -231,10 +231,10 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 	// Autocalibrate the desired work size for the kernel, or use one of the
 	// values passed explicitly by the use.
 	// The intensity or worksize must be set by the user.
-	userSetWorkSize := false
+	userSetWorkSize := true
 	if reflect.DeepEqual(cfg.Intensity, defaultIntensity) &&
 		reflect.DeepEqual(cfg.WorkSize, defaultWorkSize) {
-		userSetWorkSize = true
+		userSetWorkSize = false
 	}
 
 	var globalWorkSize uint32
@@ -243,6 +243,10 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 		if err != nil {
 			return nil, err
 		}
+
+		minrLog.Debugf("Autocalibration successful, work size for %v"+
+			"ms per kernel execution on device %v determined to be %v",
+			cfg.Autocalibrate, d.index, workSize)
 
 		globalWorkSize = idealWorkSize
 	} else {
