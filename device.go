@@ -258,7 +258,7 @@ func NewDevice(index int, platformID cl.CL_platform_id, deviceID cl.CL_device_id
 	}
 	intensity := math.Log2(float64(globalWorkSize))
 	minrLog.Infof("GPU #%d: Work size set to %v ('intensity' %v)",
-		d.index, cfg.WorkSizeInts[d.index], intensity)
+		d.index, globalWorkSize, intensity)
 	d.workSize = globalWorkSize
 
 	return d, nil
