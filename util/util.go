@@ -3,6 +3,7 @@
 package util
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math"
 	"math/big"
@@ -105,4 +106,28 @@ func FormatHashRate(h float64) string {
 	}
 
 	return fmt.Sprintf("%.1f GH/s", h)
+}
+
+// ConvertByteSliceHeaderToUint32Slice converts a byte slice of a header into
+// a slice of uint32s.
+func ConvertByteSliceHeaderToUint32Slice(b [180]byte) [45]uint32 {
+	var us [45]uint32
+	for i := 0; i < 45; i++ {
+		us[i] = binary.LittleEndian.Uint32(b[i : i+4])
+	}
+
+	return us
+}
+
+// ConvertUint32SliceHeaderToByteSlice converts a header that is a slice of
+// uint32s into a header that is a slice of bytes.
+func ConvertUint32SliceHeaderToByteSlice(us [45]uint32) [180]byte {
+	var b [180]byte
+	for i := 0; i < 45; i++ {
+		var b4 [4]byte
+		binary.LittleEndian.PutUint32(b4[:], us[i])
+		copy(b[i:i+4], b4[:])
+	}
+
+	return b
 }

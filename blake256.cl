@@ -29,15 +29,23 @@
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(
 	volatile __global uint * restrict output,
-	// Midstate
-	const uint h0,
-	const uint h1,
-	const uint h2,
-	const uint h3,
-	const uint h4,
-	const uint h5,
-	const uint h6,
-	const uint h7,
+	// Precomputation state
+	const uint v0,
+	const uint v1,
+	const uint v2,
+	const uint v3,
+	const uint v4,
+	const uint v5,
+	const uint v6,
+	const uint v7,
+	const uint v8,
+	const uint v9,
+	const uint vA,
+	const uint vB,
+	const uint vC,
+	const uint vD,
+	const uint vE,
+	const uint vF,
 
 	// last 52 bytes of data
 	const uint M0,
@@ -83,26 +91,46 @@ __kernel void search(
 	uint pre7;
 
 	// Load the midstate and initialize.
-	V0 = h0;
-	V1 = h1;
-	V2 = h2;
-	V3 = h3;
-	V4 = h4;
-	V5 = h5;
-	V6 = h6;
-	pre7 = V7 = h7;
+	V0 = v0;
+	V1 = v1;
+	V2 = v2;
+	V3 = v3;
+	V4 = v4;
+	V5 = v5;
+	V6 = v6;
+	pre7 = V7 = v7;
 
-	V8 = cst0;
-	V9 = cst1;
-	VA = cst2;
-	VB = cst3;
-	VC = 0xA4093D82UL;
-	VD = 0x299F3470UL;
-	VE = cst6;
-	VF = cst7;
+	V8 = v8;
+	V9 = v9;
+	VA = vA;
+	VB = vB;
+	VC = vC;
+	VD = vD;
+	VE = vE;
+	VF = vF;
 
 	// 14 rounds. 
-	V0 = V0 + (M0 ^ cst1); V0 = V0 + V4; VC = VC ^ V0; VC = SWAP(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 12U); V1 = V1 + (M2 ^ cst3); V1 = V1 + V5; VD = VD ^ V1; VD = SWAP(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 12U); V2 = V2 + (M4 ^ cst5); V2 = V2 + V6; VE = VE ^ V2; VE = SWAP(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 12U); V3 = V3 + (M6 ^ cst7); V3 = V3 + V7; VF = VF ^ V3; VF = SWAP(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 12U); V2 = V2 + (M5 ^ cst4); V2 = V2 + V6; VE = VE ^ V2; VE = ROTR8(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 7U); V3 = V3 + (M7 ^ cst6); V3 = V3 + V7; VF = VF ^ V3; VF = ROTR8(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 7U); V1 = V1 + (M3 ^ cst2); V1 = V1 + V5; VD = VD ^ V1; VD = ROTR8(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 7U); V0 = V0 + (M1 ^ cst0); V0 = V0 + V4; VC = VC ^ V0; VC = ROTR8(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 7U); V0 = V0 + (M8 ^ cst9); V0 = V0 + V5; VF = VF ^ V0; VF = SWAP(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 12U); V1 = V1 + (MA ^ cstB); V1 = V1 + V6; VC = VC ^ V1; VC = SWAP(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 12U); V2 = V2 + (MC ^ cstD); V2 = V2 + V7; VD = VD ^ V2; VD = SWAP(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 12U); V3 = V3 + (ME ^ cstF); V3 = V3 + V4; VE = VE ^ V3; VE = SWAP(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 12U); V2 = V2 + (MD ^ cstC); V2 = V2 + V7; VD = VD ^ V2; VD = ROTR8(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 7U); V3 = V3 + (MF ^ cstE); V3 = V3 + V4; VE = VE ^ V3; VE = ROTR8(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 7U); V1 = V1 + (MB ^ cstA); V1 = V1 + V6; VC = VC ^ V1; VC = ROTR8(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 7U); V0 = V0 + (M9 ^ cst8); V0 = V0 + V5; VF = VF ^ V0; VF = ROTR8(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 7U);
+	// V0 = V0 + (M0 ^ cst1); V0 = V0 + V4; VC = VC ^ V0; VC = SWAP(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 12U); V1 = V1 + (M2 ^ cst3); V1 = V1 + V5; VD = VD ^ V1; VD = SWAP(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 12U); V2 = V2 + (M4 ^ cst5); V2 = V2 + V6; VE = VE ^ V2; VE = SWAP(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 12U); V3 = V3 + (M6 ^ cst7); V3 = V3 + V7; VF = VF ^ V3; VF = SWAP(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 12U); V2 = V2 + (M5 ^ cst4); V2 = V2 + V6; VE = VE ^ V2; VE = ROTR8(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 7U); V3 = V3 + (M7 ^ cst6); V3 = V3 + V7; VF = VF ^ V3; VF = ROTR8(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 7U); V1 = V1 + (M3 ^ cst2); V1 = V1 + V5; VD = VD ^ V1; VD = ROTR8(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 7U); V0 = V0 + (M1 ^ cst0); V0 = V0 + V4; VC = VC ^ V0; VC = ROTR8(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 7U); V0 = V0 + (M8 ^ cst9); V0 = V0 + V5; VF = VF ^ V0; VF = SWAP(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 12U); V1 = V1 + (MA ^ cstB); V1 = V1 + V6; VC = VC ^ V1; VC = SWAP(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 12U); V2 = V2 + (MC ^ cstD); V2 = V2 + V7; VD = VD ^ V2; VD = SWAP(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 12U); V3 = V3 + (ME ^ cstF); V3 = V3 + V4; VE = VE ^ V3; VE = SWAP(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 12U); V2 = V2 + (MD ^ cstC); V2 = V2 + V7; VD = VD ^ V2; VD = ROTR8(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 7U); V3 = V3 + (MF ^ cstE); V3 = V3 + V4; VE = VE ^ V3; VE = ROTR8(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 7U); V1 = V1 + (MB ^ cstA); V1 = V1 + V6; VC = VC ^ V1; VC = ROTR8(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 7U); V0 = V0 + (M9 ^ cst8); V0 = V0 + V5; VF = VF ^ V0; VF = ROTR8(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 7U);
+	// Modified first round accounting from precomputation excluding 
+	// the nonce.
+			v[ 1]+= (nonce ^ 0x13198A2E);
+		v[13] = ROR8(v[13] ^ v[1]);
+		v[ 9]+= v[13];
+		v[ 5] = ROTR32(v[5] ^ v[9], 7);
+
+		int i = 0;
+		v[ 1]+= c_xors[i++];// + v[ 6];
+		v[ 0]+= v[5];
+		v[12] = ROL16(v[12] ^ v[ 1]);         v[15] = ROL16(v[15] ^ v[ 0]);
+		v[11]+= v[12];                        v[10]+= v[15];
+		v[ 6] = ROTR32(v[ 6] ^ v[11], 12);    v[ 5] = ROTR32(v[5] ^ v[10], 12);
+		v[ 1]+= c_xors[i++] + v[ 6];          v[ 0]+= c_xors[i++] + v[ 5];
+		v[12] = ROR8(v[12] ^ v[ 1]);          v[15] = ROR8(v[15] ^ v[ 0]);
+		v[11]+= v[12];                        v[10]+= v[15];
+		v[ 6] = ROTR32(v[ 6] ^ v[11], 7);     v[ 5] = ROTR32(v[ 5] ^ v[10], 7);
+
+	
+	// Remaining 13 rounds.
 	V0 = V0 + (ME ^ cstA); V0 = V0 + V4; VC = VC ^ V0; VC = SWAP(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 12U); V1 = V1 + (M4 ^ cst8); V1 = V1 + V5; VD = VD ^ V1; VD = SWAP(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 12U); V2 = V2 + (M9 ^ cstF); V2 = V2 + V6; VE = VE ^ V2; VE = SWAP(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 12U); V3 = V3 + (MD ^ cst6); V3 = V3 + V7; VF = VF ^ V3; VF = SWAP(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 12U); V2 = V2 + (MF ^ cst9); V2 = V2 + V6; VE = VE ^ V2; VE = ROTR8(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 7U); V3 = V3 + (M6 ^ cstD); V3 = V3 + V7; VF = VF ^ V3; VF = ROTR8(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 7U); V1 = V1 + (M8 ^ cst4); V1 = V1 + V5; VD = VD ^ V1; VD = ROTR8(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 7U); V0 = V0 + (MA ^ cstE); V0 = V0 + V4; VC = VC ^ V0; VC = ROTR8(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 7U); V0 = V0 + (M1 ^ cstC); V0 = V0 + V5; VF = VF ^ V0; VF = SWAP(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 12U); V1 = V1 + (M0 ^ cst2); V1 = V1 + V6; VC = VC ^ V1; VC = SWAP(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 12U); V2 = V2 + (MB ^ cst7); V2 = V2 + V7; VD = VD ^ V2; VD = SWAP(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 12U); V3 = V3 + (M5 ^ cst3); V3 = V3 + V4; VE = VE ^ V3; VE = SWAP(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 12U); V2 = V2 + (M7 ^ cstB); V2 = V2 + V7; VD = VD ^ V2; VD = ROTR8(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 7U); V3 = V3 + (M3 ^ cst5); V3 = V3 + V4; VE = VE ^ V3; VE = ROTR8(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 7U); V1 = V1 + (M2 ^ cst0); V1 = V1 + V6; VC = VC ^ V1; VC = ROTR8(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 7U); V0 = V0 + (MC ^ cst1); V0 = V0 + V5; VF = VF ^ V0; VF = ROTR8(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 7U);
 	V0 = V0 + (MB ^ cst8); V0 = V0 + V4; VC = VC ^ V0; VC = SWAP(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 12U); V1 = V1 + (MC ^ cst0); V1 = V1 + V5; VD = VD ^ V1; VD = SWAP(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 12U); V2 = V2 + (M5 ^ cst2); V2 = V2 + V6; VE = VE ^ V2; VE = SWAP(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 12U); V3 = V3 + (MF ^ cstD); V3 = V3 + V7; VF = VF ^ V3; VF = SWAP(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 12U); V2 = V2 + (M2 ^ cst5); V2 = V2 + V6; VE = VE ^ V2; VE = ROTR8(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 7U); V3 = V3 + (MD ^ cstF); V3 = V3 + V7; VF = VF ^ V3; VF = ROTR8(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 7U); V1 = V1 + (M0 ^ cstC); V1 = V1 + V5; VD = VD ^ V1; VD = ROTR8(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 7U); V0 = V0 + (M8 ^ cstB); V0 = V0 + V4; VC = VC ^ V0; VC = ROTR8(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 7U); V0 = V0 + (MA ^ cstE); V0 = V0 + V5; VF = VF ^ V0; VF = SWAP(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 12U); V1 = V1 + (M3 ^ cst6); V1 = V1 + V6; VC = VC ^ V1; VC = SWAP(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 12U); V2 = V2 + (M7 ^ cst1); V2 = V2 + V7; VD = VD ^ V2; VD = SWAP(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 12U); V3 = V3 + (M9 ^ cst4); V3 = V3 + V4; VE = VE ^ V3; VE = SWAP(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 12U); V2 = V2 + (M1 ^ cst7); V2 = V2 + V7; VD = VD ^ V2; VD = ROTR8(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 7U); V3 = V3 + (M4 ^ cst9); V3 = V3 + V4; VE = VE ^ V3; VE = ROTR8(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 7U); V1 = V1 + (M6 ^ cst3); V1 = V1 + V6; VC = VC ^ V1; VC = ROTR8(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 7U); V0 = V0 + (ME ^ cstA); V0 = V0 + V5; VF = VF ^ V0; VF = ROTR8(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 7U);
 	V0 = V0 + (M7 ^ cst9); V0 = V0 + V4; VC = VC ^ V0; VC = SWAP(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 12U); V1 = V1 + (M3 ^ cst1); V1 = V1 + V5; VD = VD ^ V1; VD = SWAP(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 12U); V2 = V2 + (MD ^ cstC); V2 = V2 + V6; VE = VE ^ V2; VE = SWAP(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 12U); V3 = V3 + (MB ^ cstE); V3 = V3 + V7; VF = VF ^ V3; VF = SWAP(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 12U); V2 = V2 + (MC ^ cstD); V2 = V2 + V6; VE = VE ^ V2; VE = ROTR8(VE); VA = VA + VE; V6 = V6 ^ VA; V6 = ROTR(V6, 7U); V3 = V3 + (ME ^ cstB); V3 = V3 + V7; VF = VF ^ V3; VF = ROTR8(VF); VB = VB + VF; V7 = V7 ^ VB; V7 = ROTR(V7, 7U); V1 = V1 + (M1 ^ cst3); V1 = V1 + V5; VD = VD ^ V1; VD = ROTR8(VD); V9 = V9 + VD; V5 = V5 ^ V9; V5 = ROTR(V5, 7U); V0 = V0 + (M9 ^ cst7); V0 = V0 + V4; VC = VC ^ V0; VC = ROTR8(VC); V8 = V8 + VC; V4 = V4 ^ V8; V4 = ROTR(V4, 7U); V0 = V0 + (M2 ^ cst6); V0 = V0 + V5; VF = VF ^ V0; VF = SWAP(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 12U); V1 = V1 + (M5 ^ cstA); V1 = V1 + V6; VC = VC ^ V1; VC = SWAP(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 12U); V2 = V2 + (M4 ^ cst0); V2 = V2 + V7; VD = VD ^ V2; VD = SWAP(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 12U); V3 = V3 + (MF ^ cst8); V3 = V3 + V4; VE = VE ^ V3; VE = SWAP(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 12U); V2 = V2 + (M0 ^ cst4); V2 = V2 + V7; VD = VD ^ V2; VD = ROTR8(VD); V8 = V8 + VD; V7 = V7 ^ V8; V7 = ROTR(V7, 7U); V3 = V3 + (M8 ^ cstF); V3 = V3 + V4; VE = VE ^ V3; VE = ROTR8(VE); V9 = V9 + VE; V4 = V4 ^ V9; V4 = ROTR(V4, 7U); V1 = V1 + (MA ^ cst5); V1 = V1 + V6; VC = VC ^ V1; VC = ROTR8(VC); VB = VB + VC; V6 = V6 ^ VB; V6 = ROTR(V6, 7U); V0 = V0 + (M6 ^ cst2); V0 = V0 + V5; VF = VF ^ V0; VF = ROTR8(VF); VA = VA + VF; V5 = V5 ^ VA; V5 = ROTR(V5, 7U);
