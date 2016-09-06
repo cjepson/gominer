@@ -90,17 +90,16 @@ func TestPreCalc(t *testing.T) {
 		headerAsBytes := util.ConvertUint32SliceHeaderToByteSlice(test.header)
 		blake256.Block(midstate[:], headerAsBytes[0:64], 512)
 		blake256.Block(midstate[:], headerAsBytes[64:128], 1024)
-		t.Errorf("midstate %x", midstate)
 
 		h, v, xorLUT := precalculateStatesAndLUT(midstate, test.header)
 		if *h != test.h {
-			t.Errorf("oh no! got %x, want %x", h, test.h)
+			t.Errorf("got %x, want %x", h, test.h)
 		}
 		if *v != test.v {
-			t.Errorf("oh no! got %x, want %x", v, test.v)
+			t.Errorf("got %x, want %x", v, test.v)
 		}
 		if *xorLUT != test.xorLUT {
-			t.Errorf("oh no!")
+			t.Errorf("got %x, want %x", xorLUT, test.xorLUT)
 		}
 	}
 }

@@ -2,7 +2,9 @@
 // originally in decred.cu by Alexis Provos/Tanguy Pruvot in ccminer.
 package main
 
-import "github.com/decred/gominer/util"
+import (
+	"github.com/decred/gominer/util"
+)
 
 func rotateRight(v uint32, c uint32) uint32 {
 	return (v >> c) | (v << (32 - c))
@@ -51,22 +53,20 @@ func precalculateStatesAndLUT(midstate [8]uint32, work [45]uint32) (*[2]uint32, 
 	v[12] = work[35]
 	v[13] = midstate[7]
 
-	util.Uint32EndiannessSwap(midstate[7])
-
 	// Load the message.
-	m[0] = work[32]
-	m[1] = work[33]
-	m[2] = work[34]
+	m[0] = util.Uint32EndiannessSwap(work[32])
+	m[1] = util.Uint32EndiannessSwap(work[33])
+	m[2] = util.Uint32EndiannessSwap(work[34])
 	m[3] = 0
-	m[4] = work[36]
-	m[5] = work[37]
-	m[6] = work[38]
-	m[7] = work[39]
-	m[8] = work[40]
-	m[9] = work[41]
-	m[10] = work[42]
-	m[11] = work[43]
-	m[12] = work[44]
+	m[4] = util.Uint32EndiannessSwap(work[36])
+	m[5] = util.Uint32EndiannessSwap(work[37])
+	m[6] = util.Uint32EndiannessSwap(work[38])
+	m[7] = util.Uint32EndiannessSwap(work[39])
+	m[8] = util.Uint32EndiannessSwap(work[40])
+	m[9] = util.Uint32EndiannessSwap(work[41])
+	m[10] = util.Uint32EndiannessSwap(work[42])
+	m[11] = util.Uint32EndiannessSwap(work[43])
+	m[12] = util.Uint32EndiannessSwap(work[44])
 	m[13] = 0x80000001
 	m[14] = 0
 	m[15] = 0x000005a0

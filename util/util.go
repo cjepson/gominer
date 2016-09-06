@@ -113,7 +113,7 @@ func FormatHashRate(h float64) string {
 func ConvertByteSliceHeaderToUint32Slice(b [180]byte) [45]uint32 {
 	var us [45]uint32
 	for i := 0; i < 45; i++ {
-		us[i] = binary.LittleEndian.Uint32(b[i : i+4])
+		us[i] = binary.LittleEndian.Uint32(b[i*4 : i*4+4])
 	}
 
 	return us
@@ -126,7 +126,7 @@ func ConvertUint32SliceHeaderToByteSlice(us [45]uint32) [180]byte {
 	for i := 0; i < 45; i++ {
 		var b4 [4]byte
 		binary.LittleEndian.PutUint32(b4[:], us[i])
-		copy(b[i:i+4], b4[:])
+		copy(b[i*4:i*4+4], b4[:])
 	}
 
 	return b
