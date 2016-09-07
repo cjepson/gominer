@@ -478,15 +478,13 @@ func (d *Device) runDevice() error {
 		}
 		offset++
 
-		// args 18..233: the XOR precomputation LUT
-		for i := 0; i < 215; i++ {
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
-				uint32Size, unsafe.Pointer(&xorLUT))
-			if status != cl.CL_SUCCESS {
-				return clError(status, "CLSetKernelArg")
-			}
-			offset++
+		// uint32s 18..233: the XOR precomputation LUT
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+			uint32Size*215, unsafe.Pointer(&xorLUT))
+		if status != cl.CL_SUCCESS {
+			return clError(status, "CLSetKernelArg")
 		}
+		offset += 215
 
 		// Clear the found count from the buffer
 		status = cl.CLEnqueueWriteBuffer(d.queue, d.outputBuffer,
