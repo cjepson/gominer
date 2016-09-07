@@ -451,40 +451,40 @@ func (d *Device) runDevice() error {
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
-		offset := 0
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+		argument := 0
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 			cl.CL_size_t(unsafe.Sizeof(obuf)),
 			unsafe.Pointer(&obuf))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (output buffer)")
 		}
-		offset++
+		argument++
 
 		// args 1..16: precomputed v
 		for i := 0; i < 16; i++ {
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 				uint32Size, unsafe.Pointer(&v))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg (v)")
 			}
-			offset++
+			argument++
 		}
 
 		// arg 17: last uint32 of midstate
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 			uint32Size, unsafe.Pointer(&h[1]))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (midstate)")
 		}
-		offset++
+		argument++
 
 		// uint32s 18..233: the XOR precomputation LUT
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 			uint32Size*215, unsafe.Pointer(&xorLUT))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (xorLUT)")
 		}
-		offset += 215
+		argument++
 
 		// Clear the found count from the buffer
 		status = cl.CLEnqueueWriteBuffer(d.queue, d.outputBuffer,
