@@ -195,7 +195,6 @@ __kernel void search(
 	v[10]+= v[15];
 	v[ 6] = ROTR(v[ 6] ^ v[11], 7);     
 	v[ 5] = ROTR(v[ 5] ^ v[10], 7);
-
 	
 	// Remaining 13 rounds.
 	pxorGS2(   2, 7, 8, 13, 3, 4, 9, 14);
@@ -290,7 +289,7 @@ __kernel void search(
 
 	// There's something in the last 4 bytes of the hash, 
 	// so this share is invalid.
-	if (pre7 ^ v[7] ^ v[15]) return;
+	if ((pre7 ^ v[15]) == v[7]) return;
         
 	// The share is valid. Push this share to our output 
 	// buffer.
