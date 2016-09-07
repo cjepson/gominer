@@ -8,8 +8,16 @@
 #define SWAP(v)   rotate(v, 16U)
 #define ROTR8(v)  rotate(v, 24U)
 #else
-#define SWAP(v)   as_uint(as_uchar4(v).xwzy)
-#define ROTR8(v)  as_uint(as_uchar4(v).wzyx)
+#define SWAP(v)  as_uint(as_uchar4(v).zwxy)
+#define ROTR8(v) as_uint(as_uchar4(v).yzwx)
+//
+// from cuda
+// #define SWAP(v)   as_uint(as_uchar4(v).xwzy)
+// #define ROTR8(v)  as_uint(as_uchar4(v).wzyx)
+//
+// also might be
+// #define SWAP(v)  as_uint(as_uchar4(v).yzwx)
+// #define ROTR8(v) as_uint(as_uchar4(v).zwxy)
 #endif
 
 #define pxorGS(a,b,c,d) { \
