@@ -8,8 +8,8 @@
 #define SWAP(v)   rotate(v, 16U)
 #define ROTR8(v)  rotate(v, 24U)
 #else
-#define SWAP(v)   as_uint(as_uchar4(v).yzwx)
-#define ROTR8(v)  as_uint(as_uchar4(v).zwxy)
+#define SWAP(v)   as_uint(as_uchar4(v).xwzy)
+#define ROTR8(v)  as_uint(as_uchar4(v).wzyx)
 #endif
 
 #define pxorGS(a,b,c,d) { \
@@ -288,9 +288,11 @@ __kernel void search(
 	}
 	*/
 
-	// Push this share.
+	// There's something in the last 4 bytes of the hash, 
+	// so this share is invalid.
 	if (pre7 ^ v[7] ^ v[15]) return;
         
-	// Update nonce.
+	// The share is valid. Push this share to our output 
+	// buffer.
 	output[++output[0]] = nonce;
 }
