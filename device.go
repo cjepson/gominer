@@ -456,7 +456,7 @@ func (d *Device) runDevice() error {
 			cl.CL_size_t(unsafe.Sizeof(obuf)),
 			unsafe.Pointer(&obuf))
 		if status != cl.CL_SUCCESS {
-			return clError(status, "CLSetKernelArg")
+			return clError(status, "CLSetKernelArg (output buffer)")
 		}
 		offset++
 
@@ -465,7 +465,7 @@ func (d *Device) runDevice() error {
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
 				uint32Size, unsafe.Pointer(&v))
 			if status != cl.CL_SUCCESS {
-				return clError(status, "CLSetKernelArg")
+				return clError(status, "CLSetKernelArg (v)")
 			}
 			offset++
 		}
@@ -474,7 +474,7 @@ func (d *Device) runDevice() error {
 		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
 			uint32Size, unsafe.Pointer(&h[1]))
 		if status != cl.CL_SUCCESS {
-			return clError(status, "CLSetKernelArg")
+			return clError(status, "CLSetKernelArg (midstate)")
 		}
 		offset++
 
@@ -482,7 +482,7 @@ func (d *Device) runDevice() error {
 		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
 			uint32Size*215, unsafe.Pointer(&xorLUT))
 		if status != cl.CL_SUCCESS {
-			return clError(status, "CLSetKernelArg")
+			return clError(status, "CLSetKernelArg (xorLUT)")
 		}
 		offset += 215
 
