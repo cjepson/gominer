@@ -448,6 +448,7 @@ func (d *Device) runDevice() error {
 		copy(workArray[:], d.work.Data[0:180])
 		work32 := util.ConvertByteSliceHeaderToUint32Slice(workArray)
 		h, v, xorLUT := precalculateStatesAndLUT(d.midstate, work32)
+		hV, vV := *h, *v
 
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
@@ -462,8 +463,9 @@ func (d *Device) runDevice() error {
 
 		// args 1..16: precomputed v
 		for i := 0; i < 16; i++ {
+			vi := vV[i]
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
-				uint32Size, unsafe.Pointer(v))
+				uint32Size, unsafe.Pointer(&vi))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg (v)")
 			}
@@ -471,8 +473,9 @@ func (d *Device) runDevice() error {
 		}
 
 		// arg 17: last uint32 of midstate
+		h1 := hV[1]
 		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
-			uint32Size, unsafe.Pointer(&h[1]))
+			uint32Size, unsafe.Pointer(&h1))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (midstate)")
 		}
