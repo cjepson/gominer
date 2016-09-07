@@ -479,8 +479,14 @@ func (d *Device) runDevice() error {
 		argument++
 
 		// arg 18: the XOR precomputation LUT
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
-			uint32Size*215, unsafe.Pointer(xorLUT))
+		lutSize := uint32Size * 215
+		cl_xorLUT := cl.CLCreateBuffer(d.context, cl.CL_MEM_READ_ONLY|
+			cl.CL_MEM_COPY_HOST_PTR, lutSize, unsafe.Pointer(xorLUT), &status)
+		if status != cl.CL_SUCCESS {
+			return clError(status, "CLCreateBuffer (xorLUT)")
+		}
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument), lutSize,
+			unsafe.Pointer(&cl_xorLUT))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (xorLUT)")
 		}
