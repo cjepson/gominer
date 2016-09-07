@@ -443,38 +443,49 @@ func (d *Device) runDevice() error {
 		}
 		d.lastBlock[work.TimestampWord] = util.Uint32EndiannessSwap(ts)
 
+		// Calculate the precalculation for the first round optimization.
+		var workArray [180]byte
+		copy(workArray[:], d.work.Data[0:180])
+		work32 := util.ConvertByteSliceHeaderToUint32Slice(workArray)
+		h, v, xorLUT := precalculateStatesAndLUT(d.midstate, work32)
+
 		// arg 0: pointer to the buffer
 		obuf := d.outputBuffer
-		status = cl.CLSetKernelArg(d.kernel, 0,
+		offset := 0
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
 			cl.CL_size_t(unsafe.Sizeof(obuf)),
 			unsafe.Pointer(&obuf))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg")
 		}
+		offset++
 
-		// args 1..8: midstate
-		for i := 0; i < 8; i++ {
-			ms := d.midstate[i]
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1),
-				uint32Size, unsafe.Pointer(&ms))
+		// args 1..16: precomputed v
+		for i := 0; i < 16; i++ {
+			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+				uint32Size, unsafe.Pointer(&v))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
 			}
+			offset++
 		}
 
-		// args 9..20: lastBlock except nonce
-		i2 := 0
-		for i := 0; i < 12; i++ {
-			if i2 == work.Nonce0Word {
-				i2++
-			}
-			lb := d.lastBlock[i2]
-			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9),
-				uint32Size, unsafe.Pointer(&lb))
+		// arg 17: last uint32 of midstate
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+			uint32Size, unsafe.Pointer(&h[1]))
+		if status != cl.CL_SUCCESS {
+			return clError(status, "CLSetKernelArg")
+		}
+		offset++
+
+		// args 18..233: the XOR precomputation LUT
+		for i := 0; i < 215; i++ {
+			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(offset),
+				uint32Size, unsafe.Pointer(&xorLUT))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg")
 			}
-			i2++
+			offset++
 		}
 
 		// Clear the found count from the buffer
