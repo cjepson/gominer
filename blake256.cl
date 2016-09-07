@@ -153,7 +153,7 @@ __kernel void search(
 	const uint pre7,
 	
 	// Precomputed LUT of pre-XORed values.
-	__constant uint *xorLUTGlobal
+	__constant uint *xorLUT
 )
 {	
 	// Load the block state.
@@ -177,12 +177,6 @@ __kernel void search(
 	v[15] = vF;
 
 	const uint nonce = get_global_id(0);
-	
-	__local uint xorLUT[215];
-	#pragma unroll
-	for (uint i = 0; i<215; i++) {
-		xorLUT[i] = xorLUTGlobal[i];
-	}
 
 	// 14 rounds.
 	//
