@@ -144,7 +144,7 @@ __kernel void search(
 	const uint pre7,
 	
 	// Precomputed LUT of pre-XORed values.
-	__global uint* xorLUT
+	__constant uint *xorLUT
 )
 {	
 	// Load the block state.
