@@ -19,7 +19,7 @@
 // also might be
 // #define SWAP(v)  as_uint(as_uchar4(v).yzwx)
 // #define ROTR8(v) as_uint(as_uchar4(v).zwxy)
-#endif
+// #endif
 
 #define pxorGS(a,b,c,d) { \
 	v[a]+= xorLUT[i++] + v[b]; \
