@@ -3,7 +3,6 @@
  */
 
 #define ROTR(v,n) rotate(v,(uint)(32U-n))
-#define ROTL(v,n) rotate(v, n)
 
 #ifdef _AMD_OPENCL
 #define SWAP(v)   rotate(v, 16U)
@@ -122,6 +121,7 @@
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(
 	volatile __global uint * restrict output,
+	
 	// Precomputation state of v in the BLAKE256 block hash.
 	const uint v0,
 	const uint v1,
@@ -144,11 +144,11 @@ __kernel void search(
 	const uint pre7,
 	
 	// Precomputed LUT of pre-XORed values.
-	__glocal uint* xorLUT
+	__global uint* xorLUT
 )
 {	
 	// Load the block state.
-	__local uint v[16] 
+	__local uint v[16];
 	v[ 0] = v0;
 	v[ 1] = v1;
 	v[ 2] = v2;
