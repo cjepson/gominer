@@ -463,7 +463,7 @@ func (d *Device) runDevice() error {
 		// args 1..16: precomputed v
 		for i := 0; i < 16; i++ {
 			status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
-				uint32Size, unsafe.Pointer(&v))
+				uint32Size, unsafe.Pointer(v))
 			if status != cl.CL_SUCCESS {
 				return clError(status, "CLSetKernelArg (v)")
 			}
@@ -480,7 +480,7 @@ func (d *Device) runDevice() error {
 
 		// arg 18: the XOR precomputation LUT
 		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
-			uint32Size*215, unsafe.Pointer(&xorLUT))
+			uint32Size*215, unsafe.Pointer(xorLUT))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (xorLUT)")
 		}
