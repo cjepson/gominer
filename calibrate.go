@@ -65,7 +65,8 @@ func (d *Device) getKernelExecutionTime(globalWorksize uint32) (time.Duration,
 	if status != cl.CL_SUCCESS {
 		return 0, clError(status, "CLCreateBuffer (xorLUT)")
 	}
-	status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument), lutSize,
+	status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
+		cl.CL_size_t(unsafe.Sizeof(cl_xorLUT)),
 		unsafe.Pointer(&cl_xorLUT))
 	if status != cl.CL_SUCCESS {
 		return 0, clError(status, "CLSetKernelArg (xorLUT)")
@@ -99,6 +100,9 @@ func (d *Device) getKernelExecutionTime(globalWorksize uint32) (time.Duration,
 	if status != cl.CL_SUCCESS {
 		return time.Duration(0), clError(status, "CLEnqueueReadBuffer")
 	}
+
+	// Release the local buffer for the LUT.
+	cl.CLReleaseMemObject(cl_xorLUT)
 
 	elapsedTime := time.Since(currentTime)
 	minrLog.Tracef("DEV #%d: Kernel execution to read time for work "+

@@ -485,7 +485,8 @@ func (d *Device) runDevice() error {
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLCreateBuffer (xorLUT)")
 		}
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument), lutSize,
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
+			cl.CL_size_t(unsafe.Sizeof(cl_xorLUT)),
 			unsafe.Pointer(&cl_xorLUT))
 		if status != cl.CL_SUCCESS {
 			return clError(status, "CLSetKernelArg (xorLUT)")
@@ -533,6 +534,9 @@ func (d *Device) runDevice() error {
 			d.foundCandidate(d.lastBlock[work.TimestampWord], outputData[i+1],
 				d.lastBlock[work.Nonce1Word])
 		}
+
+		// Release the local buffer for the LUT.
+		cl.CLReleaseMemObject(cl_xorLUT)
 
 		elapsedTime := time.Since(currentTime)
 		minrLog.Tracef("DEV #%d: Kernel execution to read time: %v", d.index,
