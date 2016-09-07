@@ -24,97 +24,97 @@
 }
 
 #define pxorGS2(a,b,c,d,a1,b1,c1,d1) {\
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \          
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = SWAP(v[ d] ^ v[ a]);           
+	v[ d] = SWAP(v[ d] ^ v[ a]); \          
 	v[d1] = SWAP(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 12);      
+	v[ b] = ROTR(v[ b] ^ v[ c], 12); \
 	v[b1] = ROTR(v[b1] ^ v[c1], 12); \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = ROTR8(v[ d] ^ v[ a]);            
+	v[ d] = ROTR8(v[ d] ^ v[ a]); \           
 	v[d1] = ROTR8(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 7);       
+	v[ b] = ROTR(v[ b] ^ v[ c], 7); \      
 	v[b1] = ROTR(v[b1] ^ v[c1], 7); \
 }
 
 #define pxory1GS2(a,b,c,d,a1,b1,c1,d1) { \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = SWAP(v[ d] ^ v[ a]);           
+	v[ d] = SWAP(v[ d] ^ v[ a]); \          
 	v[d1] = SWAP(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 12);      
+	v[ b] = ROTR(v[ b] ^ v[ c], 12); \     
 	v[b1] = ROTR(v[b1] ^ v[c1], 12); \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= (xorLUT[i++]^nonce) + v[b1]; \
-	v[ d] = ROTR8(v[ d] ^ v[ a]);            
+	v[ d] = ROTR8(v[ d] ^ v[ a]); \           
 	v[d1] = ROTR8(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 7);       
+	v[ b] = ROTR(v[ b] ^ v[ c], 7); \      
 	v[b1] = ROTR(v[b1] ^ v[c1], 7); \
 }
 
 #define pxory0GS2(a,b,c,d,a1,b1,c1,d1) { \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = SWAP(v[ d] ^ v[ a]);           
+	v[ d] = SWAP(v[ d] ^ v[ a]); \          
 	v[d1] = SWAP(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 12);      
+	v[ b] = ROTR(v[ b] ^ v[ c], 12); \     
 	v[b1] = ROTR(v[b1] ^ v[c1], 12); \
-	v[ a]+= (xorLUT[i++]^nonce) + v[ b];    
+	v[ a]+= (xorLUT[i++]^nonce) + v[ b]; \   
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = ROTR8(v[ d] ^ v[ a]);            
+	v[ d] = ROTR8(v[ d] ^ v[ a]); \           
 	v[d1] = ROTR8(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 7);       
+	v[ b] = ROTR(v[ b] ^ v[ c], 7); \      
 	v[b1] = ROTR(v[b1] ^ v[c1], 7); \
 }
 
 #define pxorx1GS2(a,b,c,d,a1,b1,c1,d1) { \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= (xorLUT[i++]^nonce) + v[b1]; \
-	v[ d] = SWAP(v[ d] ^ v[ a]);           
+	v[ d] = SWAP(v[ d] ^ v[ a]); \          
 	v[d1] = SWAP(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 12);      
+	v[ b] = ROTR(v[ b] ^ v[ c], 12); \     
 	v[b1] = ROTR(v[b1] ^ v[c1], 12); \
-	v[ a]+= xorLUT[i++] + v[ b];            
+	v[ a]+= xorLUT[i++] + v[ b]; \           
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = ROTR8(v[ d] ^ v[ a]);            
+	v[ d] = ROTR8(v[ d] ^ v[ a]); \          
 	v[d1] = ROTR8(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 7);       
+	v[ b] = ROTR(v[ b] ^ v[ c], 7); \      
 	v[b1] = ROTR(v[b1] ^ v[c1], 7); \
 }
 
 #define pxorx0GS2(a,b,c,d,a1,b1,c1,d1) { \
-	v[ a]+= (xorLUT[i++]^nonce) + v[ b];    
+	v[ a]+= (xorLUT[i++]^nonce) + v[ b]; \   
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = SWAP(v[ d] ^ v[ a]); 	        
+	v[ d] = SWAP(v[ d] ^ v[ a]); \	        
 	v[d1] = SWAP(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 12);      
+	v[ b] = ROTR(v[ b] ^ v[ c], 12); \     
 	v[b1] = ROTR(v[b1] ^ v[c1], 12); \
-	v[ a]+= xorLUT[i++] + v[ b]; 			
+	v[ a]+= xorLUT[i++] + v[ b]; \			
 	v[a1]+= xorLUT[i++] + v[b1]; \
-	v[ d] = ROTR8(v[ d] ^ v[ a]); 	        
+	v[ d] = ROTR8(v[ d] ^ v[ a]); \	        
 	v[d1] = ROTR8(v[d1] ^ v[a1]); \
-	v[ c]+= v[ d];                          
+	v[ c]+= v[ d]; \                         
 	v[c1]+= v[d1]; \
-	v[ b] = ROTR(v[ b] ^ v[ c], 7); 		
+	v[ b] = ROTR(v[ b] ^ v[ c], 7); \		
 	v[b1] = ROTR(v[b1] ^ v[c1], 7); \
 }
 
