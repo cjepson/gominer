@@ -478,7 +478,7 @@ func (d *Device) runDevice() error {
 		}
 		argument++
 
-		// uint32s 18..233: the XOR precomputation LUT
+		// arg 18: the XOR precomputation LUT
 		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 			uint32Size*215, unsafe.Pointer(&xorLUT))
 		if status != cl.CL_SUCCESS {

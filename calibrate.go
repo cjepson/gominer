@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/decred/gominer/cl"
+	"github.com/decred/gominer/util"
 	"github.com/decred/gominer/work"
 )
 
@@ -22,39 +23,48 @@ func (d *Device) getKernelExecutionTime(globalWorksize uint32) (time.Duration,
 
 	var status cl.CL_int
 
+	// Calculate the precalculation for the first round optimization.
+	var workArray [180]byte
+	copy(workArray[:], d.work.Data[0:180])
+	work32 := util.ConvertByteSliceHeaderToUint32Slice(workArray)
+	h, v, xorLUT := precalculateStatesAndLUT(d.midstate, work32)
+
 	// arg 0: pointer to the buffer
 	obuf := d.outputBuffer
-	status = cl.CLSetKernelArg(d.kernel, 0,
+	argument := 0
+	status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
 		cl.CL_size_t(unsafe.Sizeof(obuf)),
 		unsafe.Pointer(&obuf))
 	if status != cl.CL_SUCCESS {
-		return time.Duration(0), clError(status, "CLSetKernelArg")
+		return 0, clError(status, "CLSetKernelArg (output buffer)")
+	}
+	argument++
+
+	// args 1..16: precomputed v
+	for i := 0; i < 16; i++ {
+		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
+			uint32Size, unsafe.Pointer(&v))
+		if status != cl.CL_SUCCESS {
+			return 0, clError(status, "CLSetKernelArg (v)")
+		}
+		argument++
 	}
 
-	// args 1..8: midstate
-	for i := 0; i < 8; i++ {
-		ms := d.midstate[i]
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+1),
-			uint32Size, unsafe.Pointer(&ms))
-		if status != cl.CL_SUCCESS {
-			return time.Duration(0), clError(status, "CLSetKernelArg")
-		}
+	// arg 17: last uint32 of midstate
+	status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
+		uint32Size, unsafe.Pointer(&h[1]))
+	if status != cl.CL_SUCCESS {
+		return 0, clError(status, "CLSetKernelArg (midstate)")
 	}
+	argument++
 
-	// args 9..20: lastBlock except nonce
-	i2 := 0
-	for i := 0; i < 12; i++ {
-		if i2 == work.Nonce0Word {
-			i2++
-		}
-		lb := d.lastBlock[i2]
-		status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(i+9),
-			uint32Size, unsafe.Pointer(&lb))
-		if status != cl.CL_SUCCESS {
-			return time.Duration(0), clError(status, "CLSetKernelArg")
-		}
-		i2++
+	// arg 18: the XOR precomputation LUT
+	status = cl.CLSetKernelArg(d.kernel, cl.CL_uint(argument),
+		uint32Size*215, unsafe.Pointer(&xorLUT))
+	if status != cl.CL_SUCCESS {
+		return 0, clError(status, "CLSetKernelArg (xorLUT)")
 	}
+	argument++
 
 	// Clear the found count from the buffer
 	status = cl.CLEnqueueWriteBuffer(d.queue, d.outputBuffer,
