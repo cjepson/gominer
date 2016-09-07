@@ -289,7 +289,7 @@ __kernel void search(
 
 	// There's something in the last 4 bytes of the hash, 
 	// so this share is invalid.
-	if ((pre7 ^ v[15]) == v[7]) return;
+	if ((pre7 ^ v[15]) != v[7]) return;
         
 	// The share is valid. Push this share to our output 
 	// buffer.
